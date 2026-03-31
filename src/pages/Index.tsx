@@ -1,5 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { addMonths, subMonths, format } from "date-fns";
+import { db, storage } from "@/lib/firebase";
+import { doc, setDoc, onSnapshot, collection, query } from "firebase/firestore";
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import MonthSelector from "@/components/MonthSelector";
 import DayEntryForm from "@/components/DayEntryForm";
 import DayTable, { type DayEntry } from "@/components/DayTable";
@@ -28,10 +31,10 @@ const Index = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1));
   const [selectedFriend, setSelectedFriend] = useState<Friend>(user || "Daniel");
   const [chartFriend, setChartFriend] = useState<Friend>(user || "Daniel");
-
-  useEffect(() => {
-    setChartFriend(selectedFriend);
-  }, [selectedFriend]);
+  
+  const [data, setData] = useState<FriendMonthData>({});
+  const [profilePics, setProfilePics] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const [editingEntry, setEditingEntry] = useState<DayEntry | null>(null);
   const [editGains, setEditGains] = useState("");
@@ -40,15 +43,27 @@ const Index = () => {
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [isPnlModalOpen, setIsPnlModalOpen] = useState(false);
 
-  const [data, setData] = useState<FriendMonthData>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : {};
-  });
-  
-  const [profilePics, setProfilePics] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem("profile-pics-v2");
-    return saved ? JSON.parse(saved) : {};
-  });
+  // Escuta o Banco de Dados em Tempo Real (Firestore)
+  useEffect(() => {
+    const unsubData = onSnapshot(doc(db, "app", "global_data"), (snapshot) => {
+      if (snapshot.exists()) {
+        setData(snapshot.data() as FriendMonthData);
+      }
+      setIsLoading(false);
+    });
+
+    const unsubPics = onSnapshot(doc(db, "app", "profile_pics"), (snapshot) => {
+      if (snapshot.exists()) {
+        setProfilePics(snapshot.data() as Record<string, string>);
+      }
+    });
+
+    return () => { unsubData(); unsubPics(); };
+  }, []);
+
+  useEffect(() => {
+    setChartFriend(selectedFriend);
+  }, [selectedFriend]);
 
   const handleNextFriend = () => {
     const currentIndex = ALL_FRIENDS.indexOf(chartFriend);
@@ -75,19 +90,35 @@ const Index = () => {
     e.target.value = '';
   };
 
-  const handleApplyCrop = (croppedBase64: string) => {
-    const next = { ...profilePics, [user!]: croppedBase64 };
-    setProfilePics(next);
-    localStorage.setItem("profile-pics-v2", JSON.stringify(next));
-    toast.success("Foto de perfil atualizada!");
-    setCropImageSrc(null);
+  const handleApplyCrop = async (croppedBase64: string) => {
+    if (!user) return;
+    try {
+      toast.info("Fazendo upload da sua foto...");
+      
+      // Salva no Firestore (para consulta rápida)
+      const nextPics = { ...profilePics, [user]: croppedBase64 };
+      await setDoc(doc(db, "app", "profile_pics"), nextPics);
+
+      // Também salva no Cloud Storage por garantia (opcional, mas pro futuro)
+      const storageRef = ref(storage, `profiles/${user}.jpg`);
+      await uploadString(storageRef, croppedBase64, 'data_url');
+
+      toast.success("Foto de perfil salva na nuvem!");
+      setCropImageSrc(null);
+    } catch (e) {
+      toast.error("Erro ao salvar foto no servidor.");
+    }
   };
 
   const isOwner = selectedFriend === user;
 
-  const save = (next: FriendMonthData) => {
-    setData(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const save = async (next: FriendMonthData) => {
+    try {
+      await setDoc(doc(db, "app", "global_data"), next);
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao sincronizar com o banco de dados.");
+    }
   };
 
   const key = monthKey(currentMonth);
@@ -188,6 +219,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-700">
+      {isLoading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md">
+           <div className="flex flex-col items-center gap-4 text-primary animate-pulse">
+             <div className="w-12 h-12 border-4 border-t-transparent border-primary rounded-full animate-spin"></div>
+             <p className="font-bold tracking-widest text-sm">SINCRONIZANDO COM A NUVEM...</p>
+           </div>
+        </div>
+      )}
       {/* Header */}
       <header className="border-b bg-card/60 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
