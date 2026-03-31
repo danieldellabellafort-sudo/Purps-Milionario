@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 230 25% 95%;
+    --foreground: 230 25% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 230 25% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 25% 8%;
+
+    --primary: 250 65% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 230 20% 90%;
+    --secondary-foreground: 230 25% 8%;
+
+    --muted: 230 15% 92%;
+    --muted-foreground: 230 10% 42%;
+
+    --accent: 250 40% 94%;
+    --accent-foreground: 250 65% 40%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --profit: 155 70% 38%;
+    --profit-foreground: 155 70% 22%;
+    --profit-bg: 155 50% 93%;
+    --profit-light: 155 60% 85%;
+
+    --loss: 0 75% 55%;
+    --loss-foreground: 0 70% 35%;
+    --loss-bg: 0 55% 95%;
+    --loss-light: 0 60% 85%;
+
+    --chart-profit: 155 70% 45%;
+    --chart-loss: 0 75% 55%;
+
+    --border: 230 18% 88%;
+    --input: 230 18% 88%;
+    --ring: 250 65% 55%;
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border shadow-lg shadow-primary/5;
+  }
+}
