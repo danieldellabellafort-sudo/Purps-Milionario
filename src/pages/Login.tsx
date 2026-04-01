@@ -89,6 +89,16 @@ const Login = () => {
               </Button>
             </Link>
           </div>
+
+          <div className="pt-2 text-center">
+            <button 
+              type="button" 
+              onClick={() => { localStorage.clear(); sessionStorage.clear(); window.location.reload(); }}
+              className="text-xs text-destructive/50 hover:text-destructive underline decoration-dotted transition-colors"
+            >
+              Excluir cookies / Zerar aparelho
+            </button>
+          </div>
         </form>
       </div>
     </div>

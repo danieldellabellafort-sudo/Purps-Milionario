@@ -104,6 +104,16 @@ const Register = () => {
               </Link>
             </p>
           </div>
+
+          <div className="pt-4 border-t text-center">
+            <button 
+              type="button" 
+              onClick={() => { localStorage.clear(); sessionStorage.clear(); window.location.reload(); }}
+              className="text-xs text-destructive/50 hover:text-destructive underline decoration-dotted transition-colors"
+            >
+              Limpar sistema (Zerar contas simuladas do PC)
+            </button>
+          </div>
         </form>
       </div>
     </div>
