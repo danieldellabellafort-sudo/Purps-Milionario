@@ -11,6 +11,7 @@ import ProfitPieChart from "@/components/ProfitPieChart";
 import RankingBoard from "@/components/RankingBoard";
 import ImageCropper from "@/components/ImageCropper";
 import PnlDownloadModal from "@/components/PnlDownloadModal";
+import SolanaWidget from "@/components/SolanaWidget";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth, type Friend, ALL_FRIENDS } from "@/components/AuthProvider";
@@ -293,6 +294,9 @@ const Index = () => {
               <Button variant="ghost" size="icon" onClick={logout} title="Sair">
                 <LogOut className="h-5 w-5 hover:text-red-500 transition-colors" />
               </Button>
+              <div className="hidden sm:block ml-2 border-l pl-4 border-muted-foreground/20">
+                <SolanaWidget />
+              </div>
             </div>
           </div>
         </div>
