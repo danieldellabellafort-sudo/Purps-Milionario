@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Camera, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,11 +127,30 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs text-muted-foreground">Imagem Opcional</Label>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" className="flex-1 gap-2 h-12 border-dashed bg-background/50 hover:bg-primary/10" onClick={() => document.getElementById('camera-input')?.click()}>
+            <Camera className="w-5 h-5" />
+            Tirar Foto
+          </Button>
+          <Button type="button" variant="outline" className="flex-1 gap-2 h-12 border-dashed bg-background/50 hover:bg-primary/10" onClick={() => document.getElementById('file-input')?.click()}>
+            <ImageIcon className="w-5 h-5" />
+            Galeria
+          </Button>
+        </div>
         <Input
+          id="camera-input"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleImageChange}
+          className="hidden"
+        />
+        <Input
+          id="file-input"
           type="file"
           accept="image/*"
           onChange={handleImageChange}
-          className="text-base h-12 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+          className="hidden"
         />
         {image && <img src={image} alt="Preview" className="mt-2 h-16 w-16 object-cover rounded-md shadow" />}
       </div>

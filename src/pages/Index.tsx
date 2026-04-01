@@ -26,6 +26,32 @@ const monthKey = (d: Date) => format(d, "yyyy-MM");
 
 const STORAGE_KEY = "earnings-tracker-v2";
 
+const formatTimeAgo = (timestamp: number) => {
+  const diffMinutes = Math.round((Date.now() - timestamp) / 60000);
+  if (diffMinutes < 60) {
+    return `${diffMinutes} minuto${diffMinutes !== 1 ? 's' : ''} atrás`;
+  }
+  const diffHours = Math.floor(diffMinutes / 60);
+  const remainingMinutes = diffMinutes % 60;
+  
+  if (diffHours < 24) {
+    let str = `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
+    if (remainingMinutes > 0) {
+      str += ` e ${remainingMinutes} minuto${remainingMinutes !== 1 ? 's' : ''}`;
+    }
+    return `${str} atrás`;
+  }
+  
+  const diffDays = Math.floor(diffHours / 24);
+  const remainingHours = diffHours % 24;
+  
+  let str = `${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
+  if (remainingHours > 0) {
+    str += ` e ${remainingHours} hora${remainingHours !== 1 ? 's' : ''}`;
+  }
+  return `${str} atrás`;
+};
+
 const Index = () => {
   const { user, logout, friends } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1));
@@ -377,7 +403,7 @@ const Index = () => {
                         <span className="font-bold">{act.friend}</span> alterou o log do <strong className="text-primary font-mono bg-primary/10 px-1 rounded">Dia {act.day}</strong>
                       </p>
                       <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                        🕐 {Math.round((now - (act.timestamp || 0)) / 60000)} minutos atrás
+                        🕐 {formatTimeAgo(act.timestamp || now)}
                       </span>
                     </div>
                   </div>
