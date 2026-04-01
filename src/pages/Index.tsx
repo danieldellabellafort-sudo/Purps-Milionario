@@ -132,6 +132,7 @@ const Index = () => {
 
   const handleApplyCrop = async (croppedBase64: string) => {
     if (!user) return;
+    setCropImageSrc(null);
     try {
       toast.info("Fazendo upload da sua foto...");
       
@@ -144,7 +145,6 @@ const Index = () => {
       await uploadString(storageRef, croppedBase64, 'data_url');
 
       toast.success("Foto de perfil salva na nuvem!");
-      setCropImageSrc(null);
     } catch (e) {
       toast.error("Erro ao salvar foto no servidor.");
     }
@@ -414,7 +414,7 @@ const Index = () => {
                   <div className="flex items-center gap-4 text-sm bg-background/50 p-2 px-4 rounded-lg">
                     {act.gains > 0 && <span className="text-profit font-mono font-bold">+{fmt(act.gains)}</span>}
                     {act.losses > 0 && <span className="text-loss font-mono font-bold">-{fmt(act.losses)}</span>}
-                    {act.description && <span className="text-muted-foreground truncate max-w-[150px] italic">"{act.description}"</span>}
+                    {act.description && <span className="text-muted-foreground truncate max-w-[150px] italic cursor-help" title={act.description}>"{act.description}"</span>}
                   </div>
                 </div>
               ))}
