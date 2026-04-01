@@ -45,11 +45,20 @@ const Index = () => {
 
   // Escuta o Banco de Dados em Tempo Real (Firestore)
   useEffect(() => {
+    // Timer de segurança: Se o banco demorar mais de 3.5s (vazio), destrava a tela
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 3500);
+
     const unsubData = onSnapshot(doc(db, "app", "global_data"), (snapshot) => {
       if (snapshot.exists()) {
         setData(snapshot.data() as FriendMonthData);
+        clearTimeout(timer); // Recebeu dados, para o timer
+        setIsLoading(false); 
+      } else {
+        // Banco vazio, libera a entrada
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     const unsubPics = onSnapshot(doc(db, "app", "profile_pics"), (snapshot) => {
@@ -58,7 +67,11 @@ const Index = () => {
       }
     });
 
-    return () => { unsubData(); unsubPics(); };
+    return () => { 
+      unsubData(); 
+      unsubPics(); 
+      clearTimeout(timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -114,10 +127,13 @@ const Index = () => {
 
   const save = async (next: FriendMonthData) => {
     try {
-      await setDoc(doc(db, "app", "global_data"), next);
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao sincronizar com o banco de dados.");
+      // O Firestore recusa dados contendo 'undefined'.
+      // Ao converter para JSON e voltar, as chaves 'undefined' (como 'image' vazia) são ignoradas e removidas da árvore corretamente.
+      const cleanData = JSON.parse(JSON.stringify(next));
+      await setDoc(doc(db, "app", "global_data"), cleanData);
+    } catch (e: any) {
+      console.error("ERRO FIREBASE:", e);
+      toast.error(`Erro ao sincronizar: ${e.message || "desconhecido"}`);
     }
   };
 
@@ -370,10 +386,12 @@ const Index = () => {
               ))}
             </div>
           ) : (
-             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-               <span className="text-3xl mb-3 opacity-30">🕵️</span>
-               <p className="text-sm font-medium">Nenhuma movimentação foi feita ainda.</p>
-               <p className="text-xs opacity-60">As últimas 20 ações globais de lucros/perdas aparecerão aqui.</p>
+             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground bg-accent/20 rounded-xl p-6 border-dashed border-2">
+               <span className="text-4xl mb-4">🕵️</span>
+               <p className="font-medium text-foreground text-center mb-1">Este Diário ainda está sem movimentações.</p>
+               <p className="text-sm text-center opacity-80 max-w-sm">
+                 Se você salvou dados anteriormente, eles podem estar **na conta do seu outro amigo**. Clique na foto de outro nome na barra superior para visualizar o perfil dele!
+               </p>
              </div>
           )}
         </div>

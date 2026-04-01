@@ -53,6 +53,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (users[lowerEmail]) {
       return "Este e-mail já está em uso.";
     }
+    
+    const isNameTaken = Object.values(users).some(u => u.friend === name);
+    if (isNameTaken) {
+      return "Esse nome já está sendo utilizado por outra pessoa.";
+    }
+
     const newUsers = { ...users, [lowerEmail]: { pass, friend: name as Friend } };
     setUsers(newUsers);
     localStorage.setItem('auth_users_v2', JSON.stringify(newUsers));
@@ -64,8 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    // Limpa TUDO do localStorage
-    localStorage.clear();
+    // Limpa apenas o usuário atual, MAS MANTÉM os cadastros criados
+    localStorage.removeItem('auth_user_v2');
     // Limpa TUDO do sessionStorage
     sessionStorage.clear();
     // Limpa TODOS os cookies

@@ -4,13 +4,14 @@ import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC7qsYVd35vuqwcQ51pSCSr9jMbN24k5Ks",
-  authDomain: "purps-2a873.firebaseapp.com",
-  projectId: "purps-2a873",
-  storageBucket: "purps-2a873.firebasestorage.app",
-  messagingSenderId: "749518140433",
-  appId: "1:749518140433:web:4067ae906e7f7f45ccedb0",
-  measurementId: "G-FJJWPWRNE6"
+  apiKey: "AIzaSyCYN0efB4QjPytoCfbmi_ze-_kICX8HmWY",
+  authDomain: "purps-72c7f.firebaseapp.com",
+  databaseURL: "https://purps-72c7f-default-rtdb.firebaseio.com",
+  projectId: "purps-72c7f",
+  storageBucket: "purps-72c7f.firebasestorage.app",
+  messagingSenderId: "410785323533",
+  appId: "1:410785323533:web:3ad96ee91f689cfd901344",
+  measurementId: "G-NNNKHG15SM"
 };
 
 const app = initializeApp(firebaseConfig);
