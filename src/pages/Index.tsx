@@ -170,11 +170,11 @@ const Index = () => {
   const entries = friendData[key] || [];
 
   const handleAdd = useCallback(
-    (day: number, gains: number, losses: number, description: string, image?: string) => {
+    (day: number, gains: number, losses: number, description: string, images?: string[]) => {
       // Only the owner can add
       if (selectedFriend !== user) return;
       
-      const newEntry: DayEntry = { day, gains, losses, description, image, timestamp: Date.now() };
+      const newEntry: DayEntry = { day, gains, losses, description, images, timestamp: Date.now() };
       const updated = [...entries, newEntry];
       toast.success(`Registro adicionado para o dia ${day}!`);
       

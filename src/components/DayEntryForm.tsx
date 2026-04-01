@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Plus, Camera, ImageIcon } from "lucide-react";
+import { CalendarIcon, Plus, Camera, ImageIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface DayEntryFormProps {
-  onAdd: (day: number, gains: number, losses: number, description: string, image?: string) => void;
+  onAdd: (day: number, gains: number, losses: number, description: string, images?: string[]) => void;
   currentMonth: Date;
 }
 
@@ -29,7 +29,7 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
   const [gains, setGains] = useState("");
   const [losses, setLosses] = useState("");
   const [description, setDescription] = useState("");
-  const [image, setImage] = useState<string | undefined>();
+  const [images, setImages] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
 
   const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL');
@@ -55,9 +55,10 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
           const file = items[i].getAsFile();
           if (file) {
             const reader = new FileReader();
-            reader.onloadend = () => setImage(reader.result as string);
+            reader.onloadend = () => {
+              setImages(prev => prev.length < 3 ? [...prev, reader.result as string] : prev);
+            };
             reader.readAsDataURL(file);
-            break;
           }
         }
       }
@@ -80,25 +81,26 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
     }
     
     if (g === 0 && l === 0) return;
-    onAdd(selectedDate.getDate(), g, l, description.trim(), image);
+    onAdd(selectedDate.getDate(), g, l, description.trim(), images.length > 0 ? images : undefined);
     
     const today = new Date();
     setSelectedDate((today >= monthStart && today <= monthEnd) ? today : undefined);
     setGains("");
     setLosses("");
     setDescription("");
-    setImage(undefined);
+    setImages([]);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => {
       const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result as string);
+      reader.onloadend = () => {
+        setImages(prev => prev.length < 3 ? [...prev, reader.result as string] : prev);
+      };
       reader.readAsDataURL(file);
-    } else {
-      setImage(undefined);
-    }
+    });
+    e.target.value = '';
   };
 
   return (
@@ -204,7 +206,7 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Imagem Opcional (Ou 'Ctrl+V' em qualquer lugar)</Label>
+        <Label className="text-xs text-muted-foreground">Imagens Opcionais (Máx 3, ou dê 'Ctrl+V' na tela)</Label>
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1 gap-2 h-12 border-dashed bg-background/50 hover:bg-primary/10" onClick={() => document.getElementById('camera-input')?.click()}>
             <Camera className="w-5 h-5" />
@@ -227,10 +229,26 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
           id="file-input"
           type="file"
           accept="image/*"
+          multiple
           onChange={handleImageChange}
           className="hidden"
         />
-        {image && <img src={image} alt="Preview" className="mt-2 h-16 w-16 object-cover rounded-md shadow" />}
+        {images.length > 0 && (
+          <div className="flex flex-wrap gap-3 mt-2">
+            {images.map((img, idx) => (
+              <div key={idx} className="relative w-16 h-16 group">
+                <img src={img} alt="Preview" className="w-full h-full object-cover rounded-md shadow" />
+                <button
+                  type="button"
+                  onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 w-5 h-5 flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <Button type="submit" className="w-full h-12 gap-2 text-base">
         <Plus className="h-5 w-5" />

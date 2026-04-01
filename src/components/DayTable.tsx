@@ -9,6 +9,7 @@ export interface DayEntry {
   losses: number;
   description?: string;
   image?: string; // Base64 da imagem
+  images?: string[]; // Suporte a múltiplas imagens
   timestamp?: number;
 }
 
@@ -64,10 +65,14 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
                 <td className="px-4 py-3 text-muted-foreground max-w-[200px]">
                   <div className="flex items-center gap-3">
                     <span className="truncate">{entry.description || "—"}</span>
-                    {entry.image && (
-                      <button type="button" onClick={() => setSelectedImage(entry.image!)} className="shrink-0 group focus:outline-none">
-                        <img src={entry.image} alt="Nota" className="w-8 h-8 object-cover rounded shadow-sm group-hover:scale-110 transition-transform cursor-pointer" />
-                      </button>
+                    {!!(entry.images?.length || entry.image) && (
+                      <div className="flex items-center gap-1">
+                        {(entry.images || (entry.image ? [entry.image] : [])).map((img, idx) => (
+                          <button key={idx} type="button" onClick={() => setSelectedImage(img)} className="shrink-0 group focus:outline-none">
+                            <img src={img} alt={`Nota ${idx + 1}`} className="w-8 h-8 object-cover rounded shadow-sm group-hover:scale-110 transition-transform cursor-pointer" />
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </td>
