@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip, XAxis, CartesianGrid, ReferenceLine } from "recharts";
 import { X, Maximize2 } from "lucide-react";
 
@@ -80,7 +81,7 @@ export default function SolanaWidget() {
       <Maximize2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity absolute right-1 top-1" />
     </div>
 
-    {isFullScreen && (
+    {isFullScreen && createPortal(
       <div className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-md flex flex-col p-4 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex justify-between items-center bg-card p-4 rounded-2xl shadow border mb-4">
           <div className="flex items-center gap-3">
@@ -146,7 +147,8 @@ export default function SolanaWidget() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
     </>
   );
