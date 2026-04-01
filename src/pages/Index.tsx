@@ -50,7 +50,7 @@ const Index = () => {
       setIsLoading(false);
     }, 3500);
 
-    const unsubData = onSnapshot(doc(db, "app", "global_data"), (snapshot) => {
+    const unsubData = onSnapshot(doc(db, "app", "global_data_v2"), (snapshot) => {
       if (snapshot.exists()) {
         setData(snapshot.data() as FriendMonthData);
         clearTimeout(timer); // Recebeu dados, para o timer
@@ -61,7 +61,7 @@ const Index = () => {
       }
     });
 
-    const unsubPics = onSnapshot(doc(db, "app", "profile_pics"), (snapshot) => {
+    const unsubPics = onSnapshot(doc(db, "app", "profile_pics_v2"), (snapshot) => {
       if (snapshot.exists()) {
         setProfilePics(snapshot.data() as Record<string, string>);
       }
@@ -110,7 +110,7 @@ const Index = () => {
       
       // Salva no Firestore (para consulta rápida)
       const nextPics = { ...profilePics, [user]: croppedBase64 };
-      await setDoc(doc(db, "app", "profile_pics"), nextPics);
+      await setDoc(doc(db, "app", "profile_pics_v2"), nextPics);
 
       // Também salva no Cloud Storage por garantia (opcional, mas pro futuro)
       const storageRef = ref(storage, `profiles/${user}.jpg`);
@@ -130,7 +130,7 @@ const Index = () => {
       // O Firestore recusa dados contendo 'undefined'.
       // Ao converter para JSON e voltar, as chaves 'undefined' (como 'image' vazia) são ignoradas e removidas da árvore corretamente.
       const cleanData = JSON.parse(JSON.stringify(next));
-      await setDoc(doc(db, "app", "global_data"), cleanData);
+      await setDoc(doc(db, "app", "global_data_v2"), cleanData);
     } catch (e: any) {
       console.error("ERRO FIREBASE:", e);
       toast.error(`Erro ao sincronizar: ${e.message || "desconhecido"}`);

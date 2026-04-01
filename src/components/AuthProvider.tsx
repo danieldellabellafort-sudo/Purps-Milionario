@@ -18,12 +18,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Friend | null>(() => {
     // Tenta recuperar do localStorage ao carregar
-    const saved = localStorage.getItem('auth_user_v2');
+    const saved = localStorage.getItem('auth_user_v3');
     return saved ? (saved as Friend) : null;
   });
 
   const [users, setUsers] = useState<Record<string, { pass: string; friend: Friend }>>(() => {
-    const saved = localStorage.getItem('auth_users_v2');
+    const saved = localStorage.getItem('auth_users_v3');
     return saved ? JSON.parse(saved) : {};
   });
 
@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setUser(foundUser.friend);
-    localStorage.setItem('auth_user_v2', foundUser.friend);
+    localStorage.setItem('auth_user_v3', foundUser.friend);
     return true;
   };
 
@@ -61,17 +61,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const newUsers = { ...users, [lowerEmail]: { pass, friend: name as Friend } };
     setUsers(newUsers);
-    localStorage.setItem('auth_users_v2', JSON.stringify(newUsers));
+    localStorage.setItem('auth_users_v3', JSON.stringify(newUsers));
     
     setUser(name as Friend);
-    localStorage.setItem('auth_user_v2', name);
+    localStorage.setItem('auth_user_v3', name);
     return true;
   };
 
   const logout = () => {
     setUser(null);
     // Limpa apenas o usuário atual, MAS MANTÉM os cadastros criados
-    localStorage.removeItem('auth_user_v2');
+    localStorage.removeItem('auth_user_v3');
     // Limpa TUDO do sessionStorage
     sessionStorage.clear();
     // Limpa TODOS os cookies
