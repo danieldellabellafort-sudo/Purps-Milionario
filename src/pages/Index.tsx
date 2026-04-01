@@ -145,19 +145,11 @@ const Index = () => {
     (day: number, gains: number, losses: number, description: string, image?: string) => {
       // Only the owner can add
       if (selectedFriend !== user) return;
-      const existing = entries.find((e) => e.day === day);
-      let updated: DayEntry[];
-      if (existing) {
-        updated = entries.map((e) =>
-          e.day === day
-            ? { day, gains: e.gains + gains, losses: e.losses + losses, description: description || e.description, image: image || e.image, timestamp: Date.now() }
-            : e
-        );
-        toast.success(`Dia ${day} acumulado para ${selectedFriend}!`);
-      } else {
-        updated = [...entries, { day, gains, losses, description, image, timestamp: Date.now() }];
-        toast.success(`Dia ${day} adicionado para ${selectedFriend}!`);
-      }
+      
+      const newEntry: DayEntry = { day, gains, losses, description, image, timestamp: Date.now() };
+      const updated = [...entries, newEntry];
+      toast.success(`Registro adicionado para o dia ${day}!`);
+      
       save({
         ...data,
         [selectedFriend]: { ...friendData, [key]: updated },
@@ -167,14 +159,21 @@ const Index = () => {
   );
 
   const handleRemove = useCallback(
-    (day: number) => {
+    (entryToRemove: DayEntry) => {
       if (selectedFriend !== user) return;
-      const updated = entries.filter((e) => e.day !== day);
+      
+      const updated = entries.filter((e) => {
+        if (entryToRemove.timestamp) {
+          return e.timestamp !== entryToRemove.timestamp;
+        }
+        return e.day !== entryToRemove.day;
+      });
+      
       save({
         ...data,
         [selectedFriend]: { ...friendData, [key]: updated },
       });
-      toast.info(`Dia ${day} removido de ${selectedFriend}`);
+      toast.info(`Registro removido de ${selectedFriend}`);
     },
     [entries, data, key, selectedFriend, friendData]
   );
@@ -184,11 +183,16 @@ const Index = () => {
     const nGains = Number(editGains.replace(/\./g, "").replace(",", ".")) || 0;
     const nLosses = Number(editLosses.replace(/\./g, "").replace(",", ".")) || 0;
 
-    const updated = entries.map(e => 
-      e.day === editingEntry.day 
+    const updated = entries.map(e => {
+      if (editingEntry.timestamp) {
+        return e.timestamp === editingEntry.timestamp 
+          ? { ...e, gains: nGains, losses: nLosses, timestamp: Date.now() } 
+          : e;
+      }
+      return e.day === editingEntry.day 
         ? { ...e, gains: nGains, losses: nLosses, timestamp: Date.now() } 
-        : e
-    );
+        : e;
+    });
 
     save({
       ...data,

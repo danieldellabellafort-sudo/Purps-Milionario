@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ export interface DayEntry {
 
 interface DayTableProps {
   entries: DayEntry[];
-  onRemove?: (day: number) => void;
+  onRemove?: (entry: DayEntry) => void;
   onEdit?: (entry: DayEntry) => void;
 }
 
@@ -21,6 +22,8 @@ const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -52,7 +55,7 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
             const profit = entry.gains - entry.losses;
             return (
               <tr
-                key={entry.day}
+                key={entry.timestamp || `${entry.day}-${i}`}
                 className="border-t hover:bg-muted/20 transition-colors"
               >
                 <td className="px-4 py-3 font-mono font-semibold">
@@ -62,9 +65,9 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
                   <div className="flex items-center gap-3">
                     <span className="truncate">{entry.description || "—"}</span>
                     {entry.image && (
-                      <a href={entry.image} target="_blank" rel="noopener noreferrer" className="shrink-0 group">
+                      <button type="button" onClick={() => setSelectedImage(entry.image!)} className="shrink-0 group focus:outline-none">
                         <img src={entry.image} alt="Nota" className="w-8 h-8 object-cover rounded shadow-sm group-hover:scale-110 transition-transform cursor-pointer" />
-                      </a>
+                      </button>
                     )}
                   </div>
                 </td>
@@ -96,9 +99,9 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
                       )}
                       {onRemove && (
                         <button
-                          onClick={() => onRemove(entry.day)}
+                          onClick={() => onRemove(entry)}
                           className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                          title="Remover dia"
+                          title="Remover registro"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -111,6 +114,20 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
           })}
         </tbody>
       </table>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 cursor-pointer animate-in fade-in duration-200"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img 
+            src={selectedImage} 
+            alt="Imagem ampliada" 
+            className="max-w-full max-h-full object-contain rounded-md" 
+          />
+        </div>
+      )}
     </div>
   );
 };
