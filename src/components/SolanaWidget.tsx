@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip, XAxis } from "recharts";
+import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip, XAxis, CartesianGrid, ReferenceLine } from "recharts";
 import { X, Maximize2 } from "lucide-react";
 
 export default function SolanaWidget() {
@@ -7,6 +7,7 @@ export default function SolanaWidget() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [price, setPrice] = useState<number>(0);
   const [change, setChange] = useState<number>(0);
+  const [oldPrice, setOldPrice] = useState<number>(0);
 
   useEffect(() => {
     const fetchSolana = async () => {
@@ -17,9 +18,10 @@ export default function SolanaWidget() {
         setData(prices);
         
         const currentPrice = prices[prices.length - 1].value;
-        const oldPrice = prices[0].value;
+        const startPrice = prices[0].value;
         setPrice(currentPrice);
-        setChange(((currentPrice - oldPrice) / oldPrice) * 100);
+        setOldPrice(startPrice);
+        setChange(((currentPrice - startPrice) / startPrice) * 100);
       } catch (e) {
         console.error("error fetching solana", e);
       }
@@ -36,6 +38,7 @@ export default function SolanaWidget() {
   );
 
   const isUp = change >= 0;
+  const color = isUp ? "#10b981" : "#ef4444";
 
   return (
     <>
@@ -48,19 +51,26 @@ export default function SolanaWidget() {
         </div>
       </div>
       
-      <div className="w-14 h-6 opacity-80">
+      <div className="w-14 h-6 opacity-80 pointer-events-none">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="colorValueTiny" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.3}/>
+                <stop offset="95%" stopColor={color} stopOpacity={0}/>
+              </linearGradient>
+            </defs>
             <YAxis domain={['auto', 'auto']} hide />
-            <Line 
+            <Area 
               type="monotone" 
               dataKey="value" 
-              stroke={isUp ? "#10b981" : "#ef4444"} 
+              stroke={color} 
+              fillOpacity={1} 
+              fill="url(#colorValueTiny)" 
               strokeWidth={1.5} 
-              dot={false} 
               isAnimationActive={false}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
       
@@ -90,35 +100,50 @@ export default function SolanaWidget() {
           </button>
         </div>
 
-        <div className="flex-1 bg-card rounded-2xl border shadow p-2 sm:p-6 min-h-0">
+        <div className="flex-1 bg-card rounded-2xl border shadow p-2 sm:p-6 min-h-0 flex flex-col gap-2 relative">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={color} stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor={color} stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted-foreground))" opacity={0.2} />
               <XAxis 
                 dataKey="time" 
-                hide 
+                tickFormatter={(time) => new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                minTickGap={50}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
               />
               <YAxis 
                 domain={['auto', 'auto']} 
                 width={80} 
+                orientation="right"
                 tickFormatter={(v) => `$${v.toFixed(2)}`} 
                 className="text-xs font-mono font-bold" 
                 tick={{ fill: 'currentColor', opacity: 0.6 }}
+                axisLine={false}
+                tickLine={false}
               />
               <Tooltip 
                 formatter={(value: number) => [`$${value.toFixed(2)}`, 'Preço']}
                 labelFormatter={(label) => new Date(label).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))', color: 'hsl(var(--foreground))', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
               />
-              <Line 
-                type="monotone" 
+              <ReferenceLine y={oldPrice} stroke="currentColor" strokeDasharray="3 3" opacity={0.3} />
+              <Area 
+                type="linear" 
                 dataKey="value" 
-                stroke={isUp ? "#10b981" : "#ef4444"} 
-                strokeWidth={3} 
-                dot={false}
-                activeDot={{ r: 6, fill: isUp ? "#10b981" : "#ef4444", stroke: "currentColor", strokeWidth: 2 }}
+                stroke={color} 
+                strokeWidth={2} 
+                fillOpacity={1} 
+                fill="url(#colorValue)" 
                 isAnimationActive={false}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
