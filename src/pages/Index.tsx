@@ -66,6 +66,7 @@ const Index = () => {
   const [editingEntry, setEditingEntry] = useState<DayEntry | null>(null);
   const [editGains, setEditGains] = useState("");
   const [editLosses, setEditLosses] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [isPnlModalOpen, setIsPnlModalOpen] = useState(false);
@@ -213,11 +214,11 @@ const Index = () => {
     const updated = entries.map(e => {
       if (editingEntry.timestamp) {
         return e.timestamp === editingEntry.timestamp 
-          ? { ...e, gains: nGains, losses: nLosses, timestamp: Date.now() } 
+          ? { ...e, gains: nGains, losses: nLosses, description: editDescription.trim(), timestamp: Date.now() } 
           : e;
       }
       return e.day === editingEntry.day 
-        ? { ...e, gains: nGains, losses: nLosses, timestamp: Date.now() } 
+        ? { ...e, gains: nGains, losses: nLosses, description: editDescription.trim(), timestamp: Date.now() } 
         : e;
     });
 
@@ -234,6 +235,7 @@ const Index = () => {
     setEditingEntry(entry);
     setEditGains(entry.gains.toFixed(2).replace(".", ","));
     setEditLosses(entry.losses.toFixed(2).replace(".", ","));
+    setEditDescription(entry.description || "");
   };
 
   // Get all friends totals for the month
@@ -460,6 +462,15 @@ const Index = () => {
             </p>
 
             <div className="space-y-4 mb-6">
+              <div className="space-y-2">
+                <Label className="text-foreground font-semibold">Descrição (opcional)</Label>
+                <Input
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="bg-background/50 h-12 text-base focus-visible:ring-primary/30 border-primary/20"
+                  placeholder="Motivo..."
+                />
+              </div>
               <div className="space-y-2">
                 <Label className="text-profit-foreground font-semibold">Qual foi o Ganho (R$)?</Label>
                 <Input

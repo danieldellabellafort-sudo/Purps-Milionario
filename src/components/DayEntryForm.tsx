@@ -46,6 +46,27 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!e.clipboardData) return;
+      const items = e.clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image/') === 0) {
+          const file = items[i].getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setImage(reader.result as string);
+            reader.readAsDataURL(file);
+            break;
+          }
+        }
+      }
+    };
+    
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate) return;
@@ -183,7 +204,7 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Imagem Opcional</Label>
+        <Label className="text-xs text-muted-foreground">Imagem Opcional (Ou 'Ctrl+V' em qualquer lugar)</Label>
         <div className="flex gap-2">
           <Button type="button" variant="outline" className="flex-1 gap-2 h-12 border-dashed bg-background/50 hover:bg-primary/10" onClick={() => document.getElementById('camera-input')?.click()}>
             <Camera className="w-5 h-5" />
