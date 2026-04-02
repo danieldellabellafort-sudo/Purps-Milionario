@@ -16,7 +16,7 @@ import SolanaWidget from "@/components/SolanaWidget";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth, type Friend, ALL_FRIENDS } from "@/components/AuthProvider";
-import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download } from "lucide-react";
+import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +71,23 @@ const Index = () => {
   
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [isPnlModalOpen, setIsPnlModalOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("theme");
+      if (stored === "dark") return true;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDarkMode]);
 
   // Escuta o Banco de Dados em Tempo Real (Firestore)
   useEffect(() => {
@@ -129,25 +146,27 @@ const Index = () => {
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif")) {
+      const isGif = file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif");
+      if (isGif) {
         if (file.size > 10 * 1024 * 1024) {
           toast.error("Para evitar lentidão na sua rede, GIFs devem ter no máximo 10MB!");
           e.target.value = '';
           return;
         }
         
-        // Pula o modal e aplica direto pra manter a animação viva
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          handleApplyCrop(reader.result as string, true);
-          e.target.value = '';
-        };
-        reader.readAsDataURL(file);
-      } else {
+        // Modal de edição vai aparecer SOMENTE se for um GIF
         const reader = new FileReader();
         reader.onloadend = () => {
           setCropImageSrc(reader.result as string);
-          e.target.value = ''; // Reset after read completes
+          e.target.value = ''; 
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // Se NÃO for GIF, aplica direto
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          handleApplyCrop(reader.result as string, false);
+          e.target.value = '';
         };
         reader.readAsDataURL(file);
       }
@@ -159,6 +178,10 @@ const Index = () => {
   const handleApplyCrop = async (croppedBase64: string, isGif: boolean = false) => {
     if (!user) return;
     setCropImageSrc(null);
+    
+    // Atualização imediata local na UI (Optimistic update)
+    setProfilePics((prev) => ({ ...prev, [user]: croppedBase64 }));
+
     try {
       await saveChunkedProfilePic(user, croppedBase64);
       if (isGif) {
@@ -340,6 +363,9 @@ const Index = () => {
               onNext={() => setCurrentMonth(addMonths(currentMonth, 1))}
             />
             <div className="flex items-center gap-1 border-l pl-2 sm:pl-4 border-muted-foreground/20">
+              <Button variant="ghost" size="icon" onClick={() => setIsDarkMode(!isDarkMode)} title="Alternar Tema">
+                {isDarkMode ? <Sun className="h-5 w-5 hover:text-amber-400 transition-colors" /> : <Moon className="h-5 w-5 hover:text-indigo-400 transition-colors" />}
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => setIsPnlModalOpen(true)} title="Exportar Gráfico PNL">
                 <Download className="h-5 w-5 hover:text-indigo-400 transition-colors" />
               </Button>

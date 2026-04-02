@@ -1,10 +1,10 @@
-import { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import * as htmlToImage from "html-to-image";
 import { toast } from "sonner";
 import { Download, X, TrendingUp, Paintbrush, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth, type Friend, ALL_FRIENDS } from "@/components/AuthProvider";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { ComposedChart, Bar, Cell, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface PnlDownloadModalProps {
   data: Record<string, Record<string, { day: number; gains: number; losses: number }[]>>;
@@ -37,7 +37,7 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
   };
 
   const chartData = useMemo(() => {
-    let allEntries: { ts: number; display: string; profit: number; acc: number }[] = [];
+    let allEntries: any[] = [];
     const friendMonths = data[selectedFriend] || {};
     
     Object.keys(friendMonths).forEach((monthKey) => {
@@ -61,8 +61,26 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
 
     let currentAcc = 0;
     allEntries = allEntries.map(e => {
+      let prevAcc = currentAcc;
       currentAcc += e.profit;
-      return { ...e, acc: currentAcc };
+      return { ...e, prevAcc, acc: currentAcc };
+    });
+    
+    // Adicionar Média Móvel (SMA) e dados limitados por barras (Candles)
+    allEntries = allEntries.map((e, idx, arr) => {
+       const period = 5;
+       const window = arr.slice(Math.max(0, idx - period + 1), idx + 1);
+       const sma = window.reduce((sum, item) => sum + item.acc, 0) / window.length;
+       // Para a barra começar correta visualmente quando prev === acc, somamos um micro pixel ou garantimos escala nula
+       const cData = [e.prevAcc, e.acc];
+       // Corrige barras invisíveis (0 profit)
+       if (e.prevAcc === e.acc) cData[1] += 0.01;
+       
+       return { 
+         ...e, 
+         sma,
+         candleData: cData
+       };
     });
 
     return daysRange === 999 ? allEntries : allEntries.slice(-daysRange);
@@ -345,8 +363,8 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
             {/* Chart Container - This holds the transparent SVGs to be screenshotted ONCE */}
             <div id="pnl-chart-capture" ref={chartRef} className="absolute inset-0 z-10 w-full h-full">
               <div className="absolute top-5 left-6 z-10" style={{ color: textColor }}>
-                 <h3 className="text-xl font-bold" style={{ opacity: 0.9 }}>Gráfico de P&L — {selectedFriend}</h3>
-                 <p className="text-sm font-semibold" style={{ opacity: 0.6 }}>{daysRange === 999 ? 'Todo Histórico' : `Últimos ${daysRange} registros computados`}</p>
+                 <h3 className="text-xl font-bold whitespace-nowrap" style={{ opacity: 0.9 }}>Gráfico de P&L — {selectedFriend}</h3>
+                 <p className="text-sm font-semibold whitespace-nowrap" style={{ opacity: 0.6 }}>{daysRange === 999 ? 'Todo Histórico' : `Últimos ${daysRange} registros computados`}</p>
               </div>
             
             {chartData.length > 0 ? (
@@ -360,8 +378,8 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
 
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" className="z-10 relative">
-                <LineChart data={chartData} margin={{ top: 80, right: 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="4 4" stroke={textColor} strokeOpacity={0.15} vertical={false} />
+                <ComposedChart data={chartData} margin={{ top: 80, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={textColor} strokeOpacity={0.15} vertical={false} />
                   <XAxis dataKey="display" stroke={textColor} strokeOpacity={0.4} tick={{ fill: textColor, opacity: 0.6, fontSize: 13, fontWeight: 600 }} dy={10} axisLine={false} tickLine={false} />
                   <YAxis 
                     stroke={textColor} 
@@ -377,18 +395,29 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
                     contentStyle={{ backgroundColor: bgColor !== '#121212' ? bgColor : '#18181b', borderColor: textColor, borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)', opacity: 0.95 }}
                     itemStyle={{ color: textColor, fontWeight: 'bold' }}
                     labelStyle={{ color: textColor, opacity: 0.7, marginBottom: '8px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}
-                    formatter={(value: number) => [fmt(value), "Banca Acumulada"]}
+                    formatter={(value: any, name: string) => {
+                       if (name === "candleData" && Array.isArray(value)) return [`R$ ${value[0].toFixed(2)} ➔ R$ ${value[1].toFixed(2)}`, "Movimento (Dia)"];
+                       if (name === "sma") return [fmt(value), "Média Móvel EPS(5)"];
+                       if (name === "acc") return [fmt(value), "Banca Acumulada"];
+                       return [value, name];
+                    }}
                   />
+                  
+                  <Bar dataKey="candleData" maxBarSize={30} isAnimationActive={false}>
+                    {chartData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.acc >= entry.prevAcc ? "#22c55e" : "#ef4444"} />
+                    ))}
+                  </Bar>
+
                   <Line 
                     type="monotone" 
-                    dataKey="acc" 
-                    stroke={isPositive ? "#22c55e" : "#ef4444"} 
-                    strokeWidth={4} 
-                    dot={{ fill: bgColor, stroke: isPositive ? "#22c55e" : "#ef4444", strokeWidth: 3, r: 6 }} 
-                    activeDot={{ r: 8, strokeWidth: 0, fill: isPositive ? "#22c55e" : "#ef4444" }}
-                    animationDuration={1500}
+                    dataKey="sma" 
+                    stroke="#a855f7" 
+                    strokeWidth={2} 
+                    dot={false}
+                    activeDot={{ r: 6, fill: "#a855f7", strokeWidth: 0 }}
                   />
-                </LineChart>
+                </ComposedChart>
               </ResponsiveContainer>
             ) : (
                <div className="w-full h-full flex flex-col items-center justify-center text-white/30 pt-16">

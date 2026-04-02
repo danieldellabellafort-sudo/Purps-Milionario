@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { X, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,13 +9,20 @@ interface ImageCropperProps {
   onCropComplete: (croppedBase64: string) => void;
 }
 
-const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<string> => {
+const getCroppedImg = async (imageSrc: string, pixelCrop: any, isGif: boolean = false): Promise<string> => {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = (error) => reject(error);
     img.src = imageSrc;
   });
+
+  if (isGif) {
+    // Magic Trick: Envolvemos o GIF dentro de um SVG com viewbox igual ao crop
+    // Isso corta o GIF visualmente sem reconstruir frames e sem perder a animação!
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${pixelCrop.x} ${pixelCrop.y} ${pixelCrop.width} ${pixelCrop.height}"><image href="${imageSrc}" width="${image.width}" height="${image.height}" /></svg>`;
+    return "data:image/svg+xml;base64," + btoa(svg.trim());
+  }
 
   const canvas = document.createElement('canvas');
   const TARGET_SIZE = 512;
@@ -62,7 +69,8 @@ const ImageCropper = ({ imageSrc, onClose, onCropComplete }: ImageCropperProps) 
     if (!croppedAreaPixels || isProcessing) return;
     setIsProcessing(true);
     try {
-      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
+      const isGif = imageSrc?.startsWith('data:image/gif') || false;
+      const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels, isGif);
       if (croppedImage) {
         onCropComplete(croppedImage);
       }
@@ -132,20 +140,6 @@ const ImageCropper = ({ imageSrc, onClose, onCropComplete }: ImageCropperProps) 
               >
                 Cancelar
               </button>
-              {imageSrc?.startsWith('data:image/gif') && (
-                <button 
-                  onClick={() => {
-                     setIsProcessing(true);
-                     if (imageSrc) {
-                        onCropComplete(imageSrc);
-                     }
-                  }} 
-                  className="bg-yellow-500/20 text-yellow-500 px-6 py-2 rounded text-sm font-bold hover:bg-yellow-500/30 transition-colors disabled:opacity-50"
-                  disabled={isProcessing}
-                >
-                  Manter Animado
-                </button>
-              )}
 
               <button 
                 onClick={handleApply} 
