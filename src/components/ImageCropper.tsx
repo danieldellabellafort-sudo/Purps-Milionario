@@ -18,8 +18,11 @@ const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<string> 
   });
 
   const canvas = document.createElement('canvas');
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  const TARGET_SIZE = 512;
+  const scale = Math.min(TARGET_SIZE / pixelCrop.width, TARGET_SIZE / pixelCrop.height, 1);
+
+  canvas.width = pixelCrop.width * scale;
+  canvas.height = pixelCrop.height * scale;
   const ctx = canvas.getContext('2d');
 
   if (!ctx) return "";
@@ -32,8 +35,8 @@ const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<string> 
     pixelCrop.height,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    canvas.width,
+    canvas.height
   );
 
   return new Promise<string>((resolve) => {

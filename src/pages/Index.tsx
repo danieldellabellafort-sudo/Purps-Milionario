@@ -121,32 +121,48 @@ const Index = () => {
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCropImageSrc(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      if (file.type === "image/gif") {
+        if (file.size > 2 * 1024 * 1024) {
+          toast.error("Para o site não ficar pesado, GIFs devem ter no máximo 2MB!");
+          e.target.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          handleApplyCrop(reader.result as string, true);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setCropImageSrc(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
     // reset input so the same file can be selected again
     e.target.value = '';
   };
 
-  const handleApplyCrop = async (croppedBase64: string) => {
+  const handleApplyCrop = async (croppedBase64: string, isGif: boolean = false) => {
     if (!user) return;
     setCropImageSrc(null);
     try {
       toast.info("Fazendo upload da sua foto...");
       
-      // Salva no Firestore (para consulta rápida)
-      const nextPics = { ...profilePics, [user]: croppedBase64 };
+      const fileExt = isGif ? 'gif' : 'webp';
+      const storageRef = ref(storage, `profiles/${user}.${fileExt}`);
+      
+      await uploadString(storageRef, croppedBase64, 'data_url');
+      const downloadUrl = await getDownloadURL(storageRef);
+      
+      // Salva a URL no Firestore (para consulta rápida e não pesar o site)
+      const nextPics = { ...profilePics, [user]: downloadUrl };
       await setDoc(doc(db, "app", "profile_pics_v2"), nextPics);
 
-      // Também salva no Cloud Storage por garantia (opcional, mas pro futuro)
-      const storageRef = ref(storage, `profiles/${user}.jpg`);
-      await uploadString(storageRef, croppedBase64, 'data_url');
-
-      toast.success("Foto de perfil salva na nuvem!");
+      toast.success("Foto de perfil salva com sucesso!");
     } catch (e) {
+      console.error(e);
       toast.error("Erro ao salvar foto no servidor.");
     }
   };
