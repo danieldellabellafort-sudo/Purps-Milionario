@@ -143,8 +143,8 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
 
         toast.info("Processando arquivo final...", { duration: 3000 });
 
-        const { default: gifshotPkg } = await import("gifshot");
-        const gifshot = gifshotPkg || gifshotPkg;
+        const gifshotModule = await import("gifshot");
+        const gifshot = gifshotModule.default || gifshotModule;
 
         gifshot.createGIF({
            images: frames,
@@ -328,7 +328,6 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
                 muted 
                 playsInline 
                 className="absolute inset-0 w-full h-full object-cover z-0"
-                crossOrigin="anonymous"
               />
             )}
             
@@ -337,7 +336,6 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
                  id="pnl-bg-media"
                  src={bgImage}
                  className="absolute inset-0 w-full h-full object-cover z-0"
-                 crossOrigin="anonymous"
                />
             )}
 
