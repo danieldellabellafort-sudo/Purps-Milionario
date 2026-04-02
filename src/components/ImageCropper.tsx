@@ -39,16 +39,12 @@ const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<string> 
     canvas.height
   );
 
-  return new Promise<string>((resolve) => {
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const reader = new FileReader();
-      reader.onloadend = () => {
-         resolve(reader.result as string);
-      };
-      reader.readAsDataURL(blob);
-    }, 'image/webp', 0.9);
-  });
+  try {
+    return canvas.toDataURL('image/webp', 0.9);
+  } catch (e) {
+    console.error("Error generating cropped image:", e);
+    return "";
+  }
 };
 
 const ImageCropper = ({ imageSrc, onClose, onCropComplete }: ImageCropperProps) => {
@@ -60,12 +56,23 @@ const ImageCropper = ({ imageSrc, onClose, onCropComplete }: ImageCropperProps) 
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const handleApply = async () => {
-    if (croppedAreaPixels) {
+    if (!croppedAreaPixels || isProcessing) return;
+    setIsProcessing(true);
+    try {
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       if (croppedImage) {
         onCropComplete(croppedImage);
+      } else {
+        alert("Erro: A imagem não pôde ser processada.");
       }
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao processar imagem.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -126,9 +133,10 @@ const ImageCropper = ({ imageSrc, onClose, onCropComplete }: ImageCropperProps) 
               </button>
               <button 
                 onClick={handleApply} 
-                className="bg-[#5865F2] hover:bg-[#4752C4] px-6 py-2 rounded text-sm font-bold transition-colors text-white"
+                disabled={isProcessing}
+                className="bg-[#5865F2] hover:bg-[#4752C4] px-6 py-2 rounded text-sm font-bold transition-colors text-white disabled:opacity-50"
               >
-                Aplicar
+                {isProcessing ? "Aplicando..." : "Aplicar"}
               </button>
             </div>
           </div>

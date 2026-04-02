@@ -156,8 +156,13 @@ const Index = () => {
       await uploadString(storageRef, croppedBase64, 'data_url');
       const downloadUrl = await getDownloadURL(storageRef);
       
+      // Cache bust string so browser forces image reload
+      const finalUrl = downloadUrl.includes('?') 
+        ? `${downloadUrl}&t=${Date.now()}` 
+        : `${downloadUrl}?t=${Date.now()}`;
+      
       // Salva a URL no Firestore (para consulta rápida e não pesar o site)
-      const nextPics = { ...profilePics, [user]: downloadUrl };
+      const nextPics = { ...profilePics, [user]: finalUrl };
       await setDoc(doc(db, "app", "profile_pics_v2"), nextPics);
 
       toast.success("Foto de perfil salva com sucesso!");
