@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { addMonths, subMonths, format } from "date-fns";
 import { db, storage } from "@/lib/firebase";
 import { doc, setDoc, onSnapshot, collection, query } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL } from "firebase/storage";
+
 import MonthSelector from "@/components/MonthSelector";
 import DayEntryForm from "@/components/DayEntryForm";
 import DayTable, { type DayEntry } from "@/components/DayTable";
@@ -10,6 +10,7 @@ import MonthlySummary from "@/components/MonthlySummary";
 import ProfitPieChart from "@/components/ProfitPieChart";
 import RankingBoard from "@/components/RankingBoard";
 import ImageCropper from "@/components/ImageCropper";
+import { saveChunkedProfilePic, subscribeToChunkedProfilePics } from "@/lib/profileStorage";
 import PnlDownloadModal from "@/components/PnlDownloadModal";
 import SolanaWidget from "@/components/SolanaWidget";
 import { toast } from "sonner";
@@ -89,15 +90,22 @@ const Index = () => {
       }
     });
 
-    const unsubPics = onSnapshot(doc(db, "app", "profile_pics_v2"), (snapshot) => {
+    // Mantém compatibilidade com fotos antigas
+    const unsubPicsV2 = onSnapshot(doc(db, "app", "profile_pics_v2"), (snapshot) => {
       if (snapshot.exists()) {
-        setProfilePics(snapshot.data() as Record<string, string>);
+        setProfilePics(prev => ({ ...snapshot.data() as Record<string, string>, ...prev }));
       }
+    });
+
+    // Escuta mudanças nas fotos de perfil (Novo sistema otimizado sem limite de 1MB)
+    const unsubPicsChunked = subscribeToChunkedProfilePics((newPics) => {
+      setProfilePics(prev => ({ ...prev, ...newPics }));
     });
 
     return () => { 
       unsubData(); 
-      unsubPics(); 
+      unsubPicsV2();
+      unsubPicsChunked(); 
       clearTimeout(timer);
     };
   }, []);
@@ -121,54 +129,46 @@ const Index = () => {
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type === "image/gif") {
-        if (file.size > 2 * 1024 * 1024) {
-          toast.error("Para o site não ficar pesado, GIFs devem ter no máximo 2MB!");
+      if (file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif")) {
+        if (file.size > 3 * 1024 * 1024) {
+          toast.error("Para evitar lentidão na sua rede, GIFs devem ter no máximo 3MB!");
           e.target.value = '';
           return;
         }
+        
+        // Pula o modal e aplica direto pra manter a animação viva
         const reader = new FileReader();
         reader.onloadend = () => {
           handleApplyCrop(reader.result as string, true);
+          e.target.value = '';
         };
         reader.readAsDataURL(file);
       } else {
         const reader = new FileReader();
         reader.onloadend = () => {
           setCropImageSrc(reader.result as string);
+          e.target.value = ''; // Reset after read completes
         };
         reader.readAsDataURL(file);
       }
+    } else {
+       e.target.value = ''; // Reset if no file
     }
-    // reset input so the same file can be selected again
-    e.target.value = '';
   };
 
   const handleApplyCrop = async (croppedBase64: string, isGif: boolean = false) => {
     if (!user) return;
     setCropImageSrc(null);
     try {
-      toast.info("Fazendo upload da sua foto...");
-      
-      const fileExt = isGif ? 'gif' : 'webp';
-      const storageRef = ref(storage, `profiles/${user}.${fileExt}`);
-      
-      await uploadString(storageRef, croppedBase64, 'data_url');
-      const downloadUrl = await getDownloadURL(storageRef);
-      
-      // Cache bust string so browser forces image reload
-      const finalUrl = downloadUrl.includes('?') 
-        ? `${downloadUrl}&t=${Date.now()}` 
-        : `${downloadUrl}?t=${Date.now()}`;
-      
-      // Salva a URL no Firestore (para consulta rápida e não pesar o site)
-      const nextPics = { ...profilePics, [user]: finalUrl };
-      await setDoc(doc(db, "app", "profile_pics_v2"), nextPics);
-
-      toast.success("Foto de perfil salva com sucesso!");
-    } catch (e) {
+      await saveChunkedProfilePic(user, croppedBase64);
+      if (isGif) {
+        toast.success("Foto salva com sucesso! (GIF Animado 100% Suportado)");
+      } else {
+        toast.success("Foto salva com sucesso!");
+      }
+    } catch (e: any) {
       console.error(e);
-      toast.error("Erro ao salvar foto no servidor.");
+      toast.error("Falha ao salvar a imagem no banco.");
     }
   };
 
@@ -524,7 +524,7 @@ const Index = () => {
         <ImageCropper
           imageSrc={cropImageSrc}
           onClose={() => setCropImageSrc(null)}
-          onCropComplete={handleApplyCrop}
+          onCropComplete={(croppedBase64) => handleApplyCrop(croppedBase64, cropImageSrc.startsWith('data:image/gif'))}
         />
       )}
 

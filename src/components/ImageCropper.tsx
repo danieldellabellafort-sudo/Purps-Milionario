@@ -65,12 +65,9 @@ const ImageCropper = ({ imageSrc, onClose, onCropComplete }: ImageCropperProps) 
       const croppedImage = await getCroppedImg(imageSrc, croppedAreaPixels);
       if (croppedImage) {
         onCropComplete(croppedImage);
-      } else {
-        alert("Erro: A imagem não pôde ser processada.");
       }
     } catch (e) {
       console.error(e);
-      alert("Erro ao processar imagem.");
     } finally {
       setIsProcessing(false);
     }
@@ -121,16 +118,35 @@ const ImageCropper = ({ imageSrc, onClose, onCropComplete }: ImageCropperProps) 
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <button onClick={onClose} className="text-sm font-medium hover:underline text-gray-300">
+            <button 
+               onClick={() => { setZoom(1); setCrop({ x: 0, y: 0 }); }} 
+               className="text-sm font-medium hover:underline text-gray-300"
+            >
               Redefinir
             </button>
             <div className="flex items-center gap-3">
               <button 
                 onClick={onClose} 
                 className="px-6 py-2 rounded text-sm font-medium hover:underline transition-colors text-white"
+                disabled={isProcessing}
               >
                 Cancelar
               </button>
+              {imageSrc?.startsWith('data:image/gif') && (
+                <button 
+                  onClick={() => {
+                     setIsProcessing(true);
+                     if (imageSrc) {
+                        onCropComplete(imageSrc);
+                     }
+                  }} 
+                  className="bg-yellow-500/20 text-yellow-500 px-6 py-2 rounded text-sm font-bold hover:bg-yellow-500/30 transition-colors disabled:opacity-50"
+                  disabled={isProcessing}
+                >
+                  Manter Animado
+                </button>
+              )}
+
               <button 
                 onClick={handleApply} 
                 disabled={isProcessing}
