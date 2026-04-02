@@ -179,6 +179,35 @@ const Index = () => {
       // O Firestore recusa dados contendo 'undefined'.
       // Ao converter para JSON e voltar, as chaves 'undefined' (como 'image' vazia) são ignoradas e removidas da árvore corretamente.
       const cleanData = JSON.parse(JSON.stringify(next));
+
+      // START HOTFIX MIGRATION TO AVOID 1MB LIMIT
+      let isMigrating = false;
+      for (const friend of Object.keys(cleanData)) {
+        for (const month of Object.keys(cleanData[friend])) {
+          const monthEntries = cleanData[friend][month];
+          for (const entry of monthEntries) {
+            if (entry.image && entry.image.startsWith("data:image/")) {
+              if (!isMigrating) toast.info("Otimizando imagens antigas para economizar espaço...");
+              isMigrating = true;
+              const { saveEntryImage } = await import('@/lib/imageStorage');
+              entry.image = await saveEntryImage(entry.image);
+            }
+            if (entry.images && Array.isArray(entry.images)) {
+              for (let i = 0; i < entry.images.length; i++) {
+                if (entry.images[i].startsWith("data:image/")) {
+                  if (!isMigrating) toast.info("Otimizando imagens antigas para economizar espaço...");
+                  isMigrating = true;
+                  const { saveEntryImage } = await import('@/lib/imageStorage');
+                  entry.images[i] = await saveEntryImage(entry.images[i]);
+                }
+              }
+            }
+          }
+        }
+      }
+      if (isMigrating) toast.success("Imagens otimizadas com sucesso! Reduzindo espaço.");
+      // END HOTFIX
+
       await setDoc(doc(db, "app", "global_data_v2"), cleanData);
     } catch (e: any) {
       console.error("ERRO FIREBASE:", e);

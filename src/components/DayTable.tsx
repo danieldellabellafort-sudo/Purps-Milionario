@@ -1,7 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getEntryImage } from "@/lib/imageStorage";
+
+const SmartImage = ({ src, alt, className, onClick }: { src: string, alt?: string, className?: string, onClick?: () => void }) => {
+  const [actualSrc, setActualSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (src.startsWith('data:image/')) {
+      setActualSrc(src);
+    } else if (src.startsWith('img_')) {
+      getEntryImage(src).then(base64 => {
+        if (base64) setActualSrc(base64);
+      });
+    } else {
+      setActualSrc(src);
+    }
+  }, [src]);
+
+  if (!actualSrc) return <div className={cn("bg-muted animate-pulse pointer-events-none", className)} />;
+
+  return <img src={actualSrc} alt={alt} className={className} onClick={onClick} />;
+};
 
 export interface DayEntry {
   day: number;
@@ -69,7 +90,7 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
                       <div className="flex items-center gap-1">
                         {(entry.images || (entry.image ? [entry.image] : [])).map((img, idx) => (
                           <button key={idx} type="button" onClick={() => setSelectedImage(img)} className="shrink-0 group focus:outline-none">
-                            <img src={img} alt={`Nota ${idx + 1}`} className="w-8 h-8 object-cover rounded shadow-sm group-hover:scale-110 transition-transform cursor-pointer" />
+                            <SmartImage src={img} alt={`Nota ${idx + 1}`} className="w-8 h-8 object-cover rounded shadow-sm group-hover:scale-110 transition-transform cursor-pointer" />
                           </button>
                         ))}
                       </div>
@@ -126,7 +147,7 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 cursor-pointer animate-in fade-in duration-200"
           onClick={() => setSelectedImage(null)}
         >
-          <img 
+          <SmartImage 
             src={selectedImage} 
             alt="Imagem ampliada" 
             className="max-w-full max-h-full object-contain rounded-md" 
