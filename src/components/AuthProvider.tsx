@@ -4,7 +4,7 @@ export const ALL_FRIENDS = ["Daniel", "Perez", "Ricardo", "Morote", "Pedro", "En
 export type Friend = (typeof ALL_FRIENDS)[number];
 
 interface AuthContextType {
-  user: Friend | null;
+  user: Friend | "MASTER" | null;
   login: (email: string, pass: string) => string | true;
   register: (name: string, email: string, pass: string) => string | true;
   logout: () => void;
@@ -16,10 +16,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<Friend | null>(() => {
+  const [user, setUser] = useState<Friend | "MASTER" | null>(() => {
     // Tenta recuperar do localStorage ao carregar
     const saved = localStorage.getItem('auth_user_v3');
-    return saved ? (saved as Friend) : null;
+    return saved ? (saved as Friend | "MASTER") : null;
   });
 
   const [users, setUsers] = useState<Record<string, { pass: string; friend: Friend }>>(() => {
@@ -33,6 +33,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (email: string, pass: string) => {
     const lowerEmail = email.toLowerCase();
+
+    if (lowerEmail === 'contamae2026@gmail.com' && pass === 'purpsmilionario2026@') {
+      setUser("MASTER");
+      localStorage.setItem('auth_user_v3', 'MASTER');
+      return true;
+    }
+
     const foundUser = users[lowerEmail];
     
     if (!foundUser) {

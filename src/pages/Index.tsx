@@ -57,8 +57,8 @@ const formatTimeAgo = (timestamp: number) => {
 const Index = () => {
   const { user, logout, friends } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1));
-  const [selectedFriend, setSelectedFriend] = useState<Friend>(user || "Daniel");
-  const [chartFriend, setChartFriend] = useState<Friend>(user || "Daniel");
+  const [selectedFriend, setSelectedFriend] = useState<Friend>(user === "MASTER" ? "Daniel" : (user || "Daniel"));
+  const [chartFriend, setChartFriend] = useState<Friend>(user === "MASTER" ? "Daniel" : (user || "Daniel"));
   
   const [data, setData] = useState<FriendMonthData>({});
   const [profilePics, setProfilePics] = useState<Record<string, string>>({});
@@ -179,11 +179,13 @@ const Index = () => {
     if (!user) return;
     setCropImageSrc(null);
     
+    const targetUser = user === "MASTER" ? selectedFriend : user;
+
     // Atualização imediata local na UI (Optimistic update)
-    setProfilePics((prev) => ({ ...prev, [user]: croppedBase64 }));
+    setProfilePics((prev) => ({ ...prev, [targetUser]: croppedBase64 }));
 
     try {
-      await saveChunkedProfilePic(user, croppedBase64);
+      await saveChunkedProfilePic(targetUser, croppedBase64);
       if (isGif) {
         toast.success("Foto salva com sucesso! (GIF Animado 100% Suportado)");
       } else {
@@ -195,7 +197,7 @@ const Index = () => {
     }
   };
 
-  const isOwner = selectedFriend === user;
+  const isOwner = selectedFriend === user || user === "MASTER";
 
   const save = async (next: FriendMonthData) => {
     try {
@@ -245,7 +247,7 @@ const Index = () => {
   const handleAdd = useCallback(
     (day: number, gains: number, losses: number, description: string, images?: string[]) => {
       // Only the owner can add
-      if (selectedFriend !== user) return;
+      if (selectedFriend !== user && user !== "MASTER") return;
       
       const newEntry: DayEntry = { day, gains, losses, description, images, timestamp: Date.now() };
       const updated = [...entries, newEntry];
@@ -261,7 +263,7 @@ const Index = () => {
 
   const handleRemove = useCallback(
     (entryToRemove: DayEntry) => {
-      if (selectedFriend !== user) return;
+      if (selectedFriend !== user && user !== "MASTER") return;
       
       const updated = entries.filter((e) => {
         if (entryToRemove.timestamp) {
@@ -280,7 +282,7 @@ const Index = () => {
   );
 
   const handleSaveEdit = () => {
-    if (!editingEntry || selectedFriend !== user) return;
+    if (!editingEntry || (selectedFriend !== user && user !== "MASTER")) return;
     const nGains = Number(editGains.replace(/\./g, "").replace(",", ".")) || 0;
     const nLosses = Number(editLosses.replace(/\./g, "").replace(",", ".")) || 0;
 
@@ -410,7 +412,7 @@ const Index = () => {
                       alt={name} 
                       className={cn("w-10 h-10 rounded-full object-cover border-2 shadow-sm", isActive ? "border-primary" : "border-transparent")} 
                     />
-                    {user === name && isActive && (
+                    {(user === name || user === "MASTER") && isActive && (
                       <label className="absolute -bottom-1 -right-2 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer shadow-lg hover:scale-110 transition-transform">
                         <Camera className="w-3 h-3" />
                         <input type="file" className="hidden" accept="image/*" onChange={handleProfilePicChange} />
