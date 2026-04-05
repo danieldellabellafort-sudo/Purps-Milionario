@@ -59,6 +59,7 @@ const Index = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1));
   const [selectedFriend, setSelectedFriend] = useState<Friend>(user === "MASTER" ? "Daniel" : (user || "Daniel"));
   const [chartFriend, setChartFriend] = useState<Friend>(user === "MASTER" ? "Daniel" : (user || "Daniel"));
+  const [podiumView, setPodiumView] = useState<'alltime' | 'daily'>('alltime');
   
   const [data, setData] = useState<FriendMonthData>({});
   const [profilePics, setProfilePics] = useState<Record<string, string>>({});
@@ -376,7 +377,7 @@ const Index = () => {
       }
     });
 
-    return { name, profit: currentAcc, maxPeak: maxPeak, maxDailyProfit: maxDailyProfit };
+    return { name, profit: currentAcc, maxPeak: maxPeak, maxDailyProfit };
   });
   
   historicalTotals.sort((a, b) => b.maxPeak - a.maxPeak);
@@ -430,70 +431,86 @@ const Index = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col xl:flex-row items-start gap-8">
         {/* Left Column: Podium view */}
-        <aside className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24 space-y-8">
-          {top1AllTime && top1AllTime.maxPeak > 0 && (
-            <div className="glass-card rounded-2xl p-6 flex flex-col items-center w-full shadow-[0_0_15px_rgba(234,179,8,0.15)] border-yellow-500/30 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-yellow-500/5 group-hover:bg-yellow-500/10 transition-colors pointer-events-none" />
-              <div className="flex items-center gap-2 mb-4 w-full justify-center text-yellow-500">
-                <Crown className="w-6 h-6 drop-shadow-md" />
-                <h2 className="font-bold text-sm tracking-widest uppercase bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">Top 1 Longo Prazo</h2>
-              </div>
-              <img 
-                src={profilePics[top1AllTime.name] || "/favicon.png"} 
-                alt={top1AllTime.name}
-                className="w-16 h-16 rounded-full object-cover mb-3 border-2 border-yellow-500/50 shadow-lg shadow-yellow-500/20 transition-transform group-hover:scale-105"
-              />
-              <span className="font-bold text-lg">{top1AllTime.name}</span>
-              <span className="font-mono text-xl font-bold text-profit mt-1 drop-shadow-sm flex flex-col items-center">
-                {fmt(top1AllTime.maxPeak)}
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Pico Histórico</span>
-              </span>
-            </div>
-          )}
-
-          {/* New Column: Top 3 Ganho Diário */}
-          {topDailyGains.length > 0 && (
-            <div className="glass-card rounded-2xl p-6 flex flex-col items-center w-full shadow-[0_0_15px_rgba(34,197,94,0.15)] border-green-500/30 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-green-500/5 transition-colors pointer-events-none" />
-              <div className="flex items-center gap-2 mb-6 w-full justify-center text-green-500">
-                <TrendingUp className="w-5 h-5 drop-shadow-md" />
-                <h2 className="font-bold text-sm tracking-widest uppercase bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">Top 3 Ganho Diário</h2>
-              </div>
+        <aside className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24 space-y-6">
+          {(top1AllTime && top1AllTime.maxPeak > 0) || (topDailyGains.length > 0) ? (
+            <div className={cn("glass-card rounded-2xl p-6 flex flex-col items-center w-full relative overflow-hidden group transition-all duration-500", podiumView === 'alltime' ? "shadow-[0_0_15px_rgba(234,179,8,0.15)] border-yellow-500/30" : "shadow-[0_0_15px_rgba(34,197,94,0.15)] border-green-500/30")}>
+              <div className={cn("absolute inset-0 transition-colors pointer-events-none", podiumView === 'alltime' ? "bg-yellow-500/5 group-hover:bg-yellow-500/10" : "bg-green-500/5 group-hover:bg-green-500/10")} />
               
-              <div className="flex items-end justify-center gap-2 h-36 w-full relative z-10">
-                {[1, 0, 2].map((visualIndex) => {
-                  const ft = topDailyGains[visualIndex];
-                  if (!ft) return <div key={`empty-${visualIndex}`} className="flex-1 min-w-0" />;
+              {/* Navigation overlay */}
+              <button 
+                onClick={() => setPodiumView(podiumView === 'alltime' ? 'daily' : 'alltime')}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/10 transition-colors z-20 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => setPodiumView(podiumView === 'alltime' ? 'daily' : 'alltime')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-white/10 transition-colors z-20 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
 
-                  const heightClass = visualIndex === 0 ? 'h-24' : visualIndex === 1 ? 'h-16' : 'h-12';
-                  const bgClass = visualIndex === 0 ? 'bg-green-500/20 border-green-500/50' : 
-                                  visualIndex === 1 ? 'bg-emerald-500/20 border-emerald-500/40' : 
-                                  'bg-teal-600/20 border-teal-600/40';
+              {podiumView === 'alltime' && top1AllTime && (
+                <div className="w-full flex flex-col items-center animate-in fade-in zoom-in duration-300">
+                  <div className="flex items-center gap-2 mb-4 w-full justify-center text-yellow-500">
+                    <Crown className="w-6 h-6 drop-shadow-md" />
+                    <h2 className="font-bold text-sm tracking-widest uppercase bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">Top 1 Longo Prazo</h2>
+                  </div>
+                  <img 
+                    src={profilePics[top1AllTime.name] || "/favicon.png"} 
+                    alt={top1AllTime.name}
+                    className="w-16 h-16 rounded-full object-cover mb-3 border-2 border-yellow-500/50 shadow-lg shadow-yellow-500/20 transition-transform group-hover:scale-105"
+                  />
+                  <span className="font-bold text-lg">{top1AllTime.name}</span>
+                  <span className="font-mono text-xl font-bold text-profit mt-1 drop-shadow-sm flex flex-col items-center">
+                    {fmt(top1AllTime.maxPeak)}
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Pico Histórico</span>
+                  </span>
+                </div>
+              )}
 
-                  return (
-                    <div key={ft.name} className="flex flex-col items-center flex-1 min-w-0">
-                      <span className="font-bold text-[10px] mb-1 text-muted-foreground/80">
-                        {visualIndex + 1}º
-                      </span>
-                      <img 
-                        src={profilePics[ft.name] || "/favicon.png"} 
-                        alt={ft.name}
-                        className={cn("rounded-full object-cover mb-2 border-2 shadow-sm border-background", visualIndex === 0 ? "w-10 h-10" : "w-8 h-8")}
-                      />
-                      <div className={cn("w-full rounded-t-lg border flex flex-col items-center justify-start pt-1.5 px-1 relative overflow-hidden", heightClass, bgClass)}>
-                        <span className="text-[9px] font-semibold truncate w-full text-center text-foreground/90">{ft.name}</span>
-                        <span className="text-[10px] font-mono mt-0.5 w-full text-center truncate font-bold text-green-400 drop-shadow-sm">
-                          {fmt(ft.maxDailyProfit)}
-                        </span>
-                        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {podiumView === 'daily' && topDailyGains.length > 0 && (
+                <div className="w-full flex flex-col items-center animate-in fade-in zoom-in duration-300">
+                  <div className="flex items-center gap-2 mb-6 w-full justify-center text-green-500">
+                    <TrendingUp className="w-5 h-5 drop-shadow-md" />
+                    <h2 className="font-bold text-sm tracking-widest uppercase bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">Ganho Diário</h2>
+                  </div>
+                  
+                  <div className="flex items-end justify-center gap-2 h-40 w-full px-2 relative z-10">
+                    {[1, 0, 2].map((visualIndex) => {
+                      const ft = topDailyGains[visualIndex];
+                      if (!ft) return <div key={`empty-${visualIndex}`} className="flex-1 min-w-0" />;
+
+                      const heightClass = visualIndex === 0 ? 'h-28' : visualIndex === 1 ? 'h-20' : 'h-14';
+                      const bgClass = visualIndex === 0 ? 'bg-green-500/20 border-green-500/50' : 
+                                      visualIndex === 1 ? 'bg-emerald-500/20 border-emerald-500/40' : 
+                                      'bg-teal-600/20 border-teal-600/40';
+
+                      return (
+                        <div key={ft.name} className="flex flex-col items-center flex-1 min-w-0">
+                          <span className="font-bold text-xs mb-1 text-muted-foreground/80">
+                            {visualIndex + 1}º
+                          </span>
+                          <img 
+                            src={profilePics[ft.name] || "/favicon.png"} 
+                            alt={ft.name}
+                            className={cn("rounded-full object-cover mb-2 border shadow-sm border-background", visualIndex === 0 ? "w-10 h-10" : "w-8 h-8")}
+                          />
+                          <div className={cn("w-full rounded-t-lg border flex flex-col items-center justify-start pt-1.5 px-1 relative overflow-hidden", heightClass, bgClass)}>
+                            <span className="text-[10px] font-semibold truncate w-full text-center text-foreground/90">{ft.name}</span>
+                            <span className="text-[10px] font-mono mt-0.5 w-full text-center truncate font-bold text-green-400 drop-shadow-sm">
+                              {fmt(ft.maxDailyProfit)}
+                            </span>
+                            <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-
+          ) : null}
           <RankingBoard friendTotals={friendTotals} profilePics={profilePics} />
         </aside>
 
