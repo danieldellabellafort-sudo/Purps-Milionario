@@ -16,7 +16,7 @@ import SolanaWidget from "@/components/SolanaWidget";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth, type Friend, ALL_FRIENDS } from "@/components/AuthProvider";
-import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download, Moon, Sun, Crown } from "lucide-react";
+import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download, Moon, Sun, Crown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -364,19 +364,28 @@ const Index = () => {
 
     let currentAcc = 0;
     let maxPeak = 0;
+    let maxDailyProfit = 0;
     
     allEntries.forEach(e => {
       currentAcc += e.profit;
       if (currentAcc > maxPeak) {
         maxPeak = currentAcc;
       }
+      if (e.profit > maxDailyProfit) {
+        maxDailyProfit = e.profit;
+      }
     });
 
-    return { name, profit: currentAcc, maxPeak: maxPeak };
+    return { name, profit: currentAcc, maxPeak: maxPeak, maxDailyProfit: maxDailyProfit };
   });
   
   historicalTotals.sort((a, b) => b.maxPeak - a.maxPeak);
   const top1AllTime = historicalTotals.length > 0 && historicalTotals[0].maxPeak > 0 ? historicalTotals[0] : null;
+
+  const topDailyGains = [...historicalTotals]
+    .filter(f => f.maxDailyProfit > 0)
+    .sort((a, b) => b.maxDailyProfit - a.maxDailyProfit)
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-700">
@@ -421,8 +430,8 @@ const Index = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col xl:flex-row items-start gap-8">
         {/* Left Column: Podium view */}
-        <aside className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24 space-y-6">
-          {top1AllTime && top1AllTime.profit > 0 && (
+        <aside className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24 space-y-8">
+          {top1AllTime && top1AllTime.maxPeak > 0 && (
             <div className="glass-card rounded-2xl p-6 flex flex-col items-center w-full shadow-[0_0_15px_rgba(234,179,8,0.15)] border-yellow-500/30 relative overflow-hidden group">
               <div className="absolute inset-0 bg-yellow-500/5 group-hover:bg-yellow-500/10 transition-colors pointer-events-none" />
               <div className="flex items-center gap-2 mb-4 w-full justify-center text-yellow-500">
@@ -441,6 +450,50 @@ const Index = () => {
               </span>
             </div>
           )}
+
+          {/* New Column: Top 3 Ganho Diário */}
+          {topDailyGains.length > 0 && (
+            <div className="glass-card rounded-2xl p-6 flex flex-col items-center w-full shadow-[0_0_15px_rgba(34,197,94,0.15)] border-green-500/30 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-green-500/5 transition-colors pointer-events-none" />
+              <div className="flex items-center gap-2 mb-6 w-full justify-center text-green-500">
+                <TrendingUp className="w-5 h-5 drop-shadow-md" />
+                <h2 className="font-bold text-sm tracking-widest uppercase bg-gradient-to-r from-green-400 to-emerald-600 bg-clip-text text-transparent">Top 3 Ganho Diário</h2>
+              </div>
+              
+              <div className="flex items-end justify-center gap-2 h-36 w-full relative z-10">
+                {[1, 0, 2].map((visualIndex) => {
+                  const ft = topDailyGains[visualIndex];
+                  if (!ft) return <div key={`empty-${visualIndex}`} className="flex-1 min-w-0" />;
+
+                  const heightClass = visualIndex === 0 ? 'h-24' : visualIndex === 1 ? 'h-16' : 'h-12';
+                  const bgClass = visualIndex === 0 ? 'bg-green-500/20 border-green-500/50' : 
+                                  visualIndex === 1 ? 'bg-emerald-500/20 border-emerald-500/40' : 
+                                  'bg-teal-600/20 border-teal-600/40';
+
+                  return (
+                    <div key={ft.name} className="flex flex-col items-center flex-1 min-w-0">
+                      <span className="font-bold text-[10px] mb-1 text-muted-foreground/80">
+                        {visualIndex + 1}º
+                      </span>
+                      <img 
+                        src={profilePics[ft.name] || "/favicon.png"} 
+                        alt={ft.name}
+                        className={cn("rounded-full object-cover mb-2 border-2 shadow-sm border-background", visualIndex === 0 ? "w-10 h-10" : "w-8 h-8")}
+                      />
+                      <div className={cn("w-full rounded-t-lg border flex flex-col items-center justify-start pt-1.5 px-1 relative overflow-hidden", heightClass, bgClass)}>
+                        <span className="text-[9px] font-semibold truncate w-full text-center text-foreground/90">{ft.name}</span>
+                        <span className="text-[10px] font-mono mt-0.5 w-full text-center truncate font-bold text-green-400 drop-shadow-sm">
+                          {fmt(ft.maxDailyProfit)}
+                        </span>
+                        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <RankingBoard friendTotals={friendTotals} profilePics={profilePics} />
         </aside>
 
