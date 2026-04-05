@@ -16,7 +16,7 @@ import SolanaWidget from "@/components/SolanaWidget";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth, type Friend, ALL_FRIENDS } from "@/components/AuthProvider";
-import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download, Moon, Sun } from "lucide-react";
+import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download, Moon, Sun, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -341,6 +341,43 @@ const Index = () => {
   const fmt = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  const historicalTotals = ALL_FRIENDS.map((name) => {
+    let allEntries: { ts: number; profit: number }[] = [];
+    const friendMonths = data[name] || {};
+    
+    Object.keys(friendMonths).forEach((monthKey) => {
+      const [yearStr, monthStr] = monthKey.split("-");
+      const year = parseInt(yearStr);
+      const monthIndex = parseInt(monthStr) - 1; 
+      
+      const entries = friendMonths[monthKey];
+      entries.forEach((e) => {
+        const ts = e.timestamp || new Date(year, monthIndex, e.day, 12, 0, 0).getTime();
+        allEntries.push({
+          ts: ts,
+          profit: e.gains - e.losses,
+        });
+      });
+    });
+
+    allEntries.sort((a, b) => a.ts - b.ts);
+
+    let currentAcc = 0;
+    let maxPeak = 0;
+    
+    allEntries.forEach(e => {
+      currentAcc += e.profit;
+      if (currentAcc > maxPeak) {
+        maxPeak = currentAcc;
+      }
+    });
+
+    return { name, profit: currentAcc, maxPeak: maxPeak };
+  });
+  
+  historicalTotals.sort((a, b) => b.maxPeak - a.maxPeak);
+  const top1AllTime = historicalTotals.length > 0 && historicalTotals[0].maxPeak > 0 ? historicalTotals[0] : null;
+
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-700">
       {isLoading && (
@@ -384,7 +421,26 @@ const Index = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col xl:flex-row items-start gap-8">
         {/* Left Column: Podium view */}
-        <aside className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24">
+        <aside className="w-full xl:w-80 shrink-0 xl:sticky xl:top-24 space-y-6">
+          {top1AllTime && top1AllTime.profit > 0 && (
+            <div className="glass-card rounded-2xl p-6 flex flex-col items-center w-full shadow-[0_0_15px_rgba(234,179,8,0.15)] border-yellow-500/30 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-yellow-500/5 group-hover:bg-yellow-500/10 transition-colors pointer-events-none" />
+              <div className="flex items-center gap-2 mb-4 w-full justify-center text-yellow-500">
+                <Crown className="w-6 h-6 drop-shadow-md" />
+                <h2 className="font-bold text-sm tracking-widest uppercase bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">Top 1 Longo Prazo</h2>
+              </div>
+              <img 
+                src={profilePics[top1AllTime.name] || "/favicon.png"} 
+                alt={top1AllTime.name}
+                className="w-16 h-16 rounded-full object-cover mb-3 border-2 border-yellow-500/50 shadow-lg shadow-yellow-500/20 transition-transform group-hover:scale-105"
+              />
+              <span className="font-bold text-lg">{top1AllTime.name}</span>
+              <span className="font-mono text-xl font-bold text-profit mt-1 drop-shadow-sm flex flex-col items-center">
+                {fmt(top1AllTime.maxPeak)}
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Pico Histórico</span>
+              </span>
+            </div>
+          )}
           <RankingBoard friendTotals={friendTotals} profilePics={profilePics} />
         </aside>
 
