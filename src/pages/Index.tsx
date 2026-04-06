@@ -16,7 +16,7 @@ import SolanaWidget from "@/components/SolanaWidget";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth, type Friend, ALL_FRIENDS } from "@/components/AuthProvider";
-import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download, Moon, Sun, Crown, TrendingUp } from "lucide-react";
+import { LogOut, Camera, ChevronLeft, ChevronRight, X, Check, Download, Moon, Sun, Crown, TrendingUp, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,20 @@ const Index = () => {
   const [editGains, setEditGains] = useState("");
   const [editLosses, setEditLosses] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editCurrency, setEditCurrency] = useState<'BRL' | 'USD'>('BRL');
+  const [editImages, setEditImages] = useState<string[]>([]);
+  const [usdRate, setUsdRate] = useState<number>(5.0);
+
+  useEffect(() => {
+    fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.USDBRL?.ask) {
+          setUsdRate(parseFloat(data.USDBRL.ask));
+        }
+      })
+      .catch(console.error);
+  }, []);
   
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [isPnlModalOpen, setIsPnlModalOpen] = useState(false);
@@ -246,11 +260,11 @@ const Index = () => {
   const entries = friendData[key] || [];
 
   const handleAdd = useCallback(
-    (day: number, gains: number, losses: number, description: string, images?: string[]) => {
+    (day: number, gains: number, losses: number, description: string, images?: string[], originalUsdGains?: number, originalUsdLosses?: number) => {
       // Only the owner can add
       if (selectedFriend !== user && user !== "MASTER") return;
       
-      const newEntry: DayEntry = { day, gains, losses, description, images, timestamp: Date.now() };
+      const newEntry: DayEntry = { day, gains, losses, description, images, timestamp: Date.now(), originalUsdGains, originalUsdLosses };
       const updated = [...entries, newEntry];
       toast.success(`Registro adicionado para o dia ${day}!`);
       
@@ -284,17 +298,27 @@ const Index = () => {
 
   const handleSaveEdit = () => {
     if (!editingEntry || (selectedFriend !== user && user !== "MASTER")) return;
-    const nGains = Number(editGains.replace(/\./g, "").replace(",", ".")) || 0;
-    const nLosses = Number(editLosses.replace(/\./g, "").replace(",", ".")) || 0;
+    let g = Number(editGains.replace(/\./g, "").replace(",", ".")) || 0;
+    let l = Number(editLosses.replace(/\./g, "").replace(",", ".")) || 0;
+
+    let originalUsdGains: number | undefined;
+    let originalUsdLosses: number | undefined;
+
+    if (editCurrency === 'USD') {
+       originalUsdGains = g > 0 ? g : undefined;
+       originalUsdLosses = l > 0 ? l : undefined;
+       g = g * usdRate;
+       l = l * usdRate;
+    }
 
     const updated = entries.map(e => {
       if (editingEntry.timestamp) {
         return e.timestamp === editingEntry.timestamp 
-          ? { ...e, gains: nGains, losses: nLosses, description: editDescription.trim(), timestamp: Date.now() } 
+          ? { ...e, gains: g, losses: l, description: editDescription.trim(), timestamp: Date.now(), originalUsdGains, originalUsdLosses, images: editImages.length > 0 ? editImages : undefined } 
           : e;
       }
       return e.day === editingEntry.day 
-        ? { ...e, gains: nGains, losses: nLosses, description: editDescription.trim(), timestamp: Date.now() } 
+        ? { ...e, gains: g, losses: l, description: editDescription.trim(), timestamp: Date.now(), originalUsdGains, originalUsdLosses, images: editImages.length > 0 ? editImages : undefined } 
         : e;
     });
 
@@ -309,9 +333,31 @@ const Index = () => {
 
   const initEdit = (entry: DayEntry) => {
     setEditingEntry(entry);
-    setEditGains(entry.gains.toFixed(2).replace(".", ","));
-    setEditLosses(entry.losses.toFixed(2).replace(".", ","));
+    
+    if (entry.originalUsdGains || entry.originalUsdLosses) {
+      setEditCurrency('USD');
+      setEditGains(entry.originalUsdGains ? entry.originalUsdGains.toFixed(2).replace(".", ",") : "");
+      setEditLosses(entry.originalUsdLosses ? entry.originalUsdLosses.toFixed(2).replace(".", ",") : "");
+    } else {
+      setEditCurrency('BRL');
+      setEditGains(entry.gains > 0 ? entry.gains.toFixed(2).replace(".", ",") : "");
+      setEditLosses(entry.losses > 0 ? entry.losses.toFixed(2).replace(".", ",") : "");
+    }
+    
     setEditDescription(entry.description || "");
+    setEditImages(entry.images || (entry.image ? [entry.image] : []));
+  };
+
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImages(prev => prev.length < 3 ? [...prev, reader.result as string] : prev);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
   };
 
   // Get all friends totals for the month
@@ -383,9 +429,21 @@ const Index = () => {
   historicalTotals.sort((a, b) => b.maxPeak - a.maxPeak);
   const top1AllTime = historicalTotals.length > 0 && historicalTotals[0].maxPeak > 0 ? historicalTotals[0] : null;
 
-  const topDailyGains = [...historicalTotals]
-    .filter(f => f.maxDailyProfit > 0)
-    .sort((a, b) => b.maxDailyProfit - a.maxDailyProfit)
+  const todayDate = new Date();
+  const todayStr = format(todayDate, "yyyy-MM");
+  const todayDay = todayDate.getDate();
+
+  const todayProfits = ALL_FRIENDS.map((name) => {
+    let todayProfit = 0;
+    const friendMonths = data[name] || {};
+    const entriesToday = friendMonths[todayStr]?.filter(e => e.day === todayDay) || [];
+    todayProfit = entriesToday.reduce((sum, e) => sum + (e.gains - e.losses), 0);
+    return { name, todayProfit };
+  });
+
+  const topDailyGains = todayProfits
+    .filter(f => f.todayProfit > 0)
+    .sort((a, b) => b.todayProfit - a.todayProfit)
     .slice(0, 3);
 
   return (
@@ -499,7 +557,7 @@ const Index = () => {
                           <div className={cn("w-full rounded-t-lg border flex flex-col items-center justify-start pt-1.5 px-1 relative overflow-hidden", heightClass, bgClass)}>
                             <span className="text-[10px] font-semibold truncate w-full text-center text-foreground/90">{ft.name}</span>
                             <span className="text-[10px] font-mono mt-0.5 w-full text-center truncate font-bold text-green-400 drop-shadow-sm">
-                              {fmt(ft.maxDailyProfit)}
+                              {fmt(ft.todayProfit)}
                             </span>
                             <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent pointer-events-none" />
                           </div>
@@ -617,9 +675,25 @@ const Index = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm bg-background/50 p-2 px-4 rounded-lg">
-                    {act.gains > 0 && <span className="text-profit font-mono font-bold">+{fmt(act.gains)}</span>}
-                    {act.losses > 0 && <span className="text-loss font-mono font-bold">-{fmt(act.losses)}</span>}
+                  <div className="flex items-center gap-4 text-sm bg-background/50 p-2 px-4 rounded-lg flex-wrap justify-end">
+                    {act.gains > 0 && (
+                      act.originalUsdGains ? (
+                        <span className="text-profit font-mono font-bold bg-profit/10 px-2 py-0.5 rounded-md">
+                          + {act.originalUsdGains.toString().replace(".", ",")} USD / {act.gains.toFixed(2).replace(".", ",")} BRL
+                        </span>
+                      ) : (
+                        <span className="text-profit font-mono font-bold bg-profit/10 px-2 py-0.5 rounded-md">+{fmt(act.gains)}</span>
+                      )
+                    )}
+                    {act.losses > 0 && (
+                      act.originalUsdLosses ? (
+                        <span className="text-loss font-mono font-bold bg-loss/10 px-2 py-0.5 rounded-md">
+                          - {act.originalUsdLosses.toString().replace(".", ",")} USD / {act.losses.toFixed(2).replace(".", ",")} BRL
+                        </span>
+                      ) : (
+                        <span className="text-loss font-mono font-bold bg-loss/10 px-2 py-0.5 rounded-md">-{fmt(act.losses)}</span>
+                      )
+                    )}
                     {act.description && <span className="text-muted-foreground truncate max-w-[150px] italic cursor-help" title={act.description}>"{act.description}"</span>}
                   </div>
                 </div>
@@ -671,27 +745,100 @@ const Index = () => {
                 <Input
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="bg-background/50 h-12 text-base focus-visible:ring-primary/30 border-primary/20"
+                  className="bg-background/50 h-10 text-base focus-visible:ring-primary/30 border-primary/20"
                   placeholder="Motivo..."
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-profit-foreground font-semibold">Qual foi o Ganho (R$)?</Label>
-                <Input
-                  value={editGains}
-                  onChange={(e) => setEditGains(e.target.value)}
-                  className="font-mono bg-background/50 h-12 text-lg text-profit focus-visible:ring-profit/30 border-profit/20"
-                  placeholder="0,00"
-                />
+
+              <div className="flex items-center gap-2 justify-between bg-background/50 p-1.5 rounded-lg border border-primary/20">
+                <Label className="text-xs text-muted-foreground font-semibold ml-1">Moeda original:</Label>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant={editCurrency === 'BRL' ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs px-3 shadow-none"
+                    onClick={() => setEditCurrency('BRL')}
+                  >
+                    BRL
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editCurrency === 'USD' ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs px-3 shadow-none flex gap-1"
+                    onClick={() => setEditCurrency('USD')}
+                  >
+                    USD
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-loss-foreground font-semibold">Qual foi a Perda (R$)?</Label>
+
+              <div className="flex gap-4">
+                <div className="space-y-2 flex-1">
+                  <Label className="text-profit-foreground font-semibold">Ganho</Label>
+                  <Input
+                    value={editGains}
+                    onChange={(e) => setEditGains(e.target.value)}
+                    className="font-mono bg-background/50 h-10 text-lg text-profit focus-visible:ring-profit/30 border-profit/20"
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="space-y-2 flex-1">
+                  <Label className="text-loss-foreground font-semibold">Perda</Label>
+                  <Input
+                    value={editLosses}
+                    onChange={(e) => setEditLosses(e.target.value)}
+                    className="font-mono bg-background/50 h-10 text-lg text-loss focus-visible:ring-loss/30 border-loss/20"
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-2">
+                <Label className="text-xs text-muted-foreground font-semibold">Imagens de Comprovantes (Máx 3)</Label>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" className="flex-1 gap-2 h-9 border-dashed bg-background/50 hover:bg-primary/10" onClick={() => document.getElementById('edit-camera-input')?.click()}>
+                    <Camera className="w-4 h-4" />
+                    Foto
+                  </Button>
+                  <Button type="button" variant="outline" className="flex-1 gap-2 h-9 border-dashed bg-background/50 hover:bg-primary/10" onClick={() => document.getElementById('edit-file-input')?.click()}>
+                    <ImageIcon className="w-4 h-4" />
+                    Galeria
+                  </Button>
+                </div>
                 <Input
-                  value={editLosses}
-                  onChange={(e) => setEditLosses(e.target.value)}
-                  className="font-mono bg-background/50 h-12 text-lg text-loss focus-visible:ring-loss/30 border-loss/20"
-                  placeholder="0,00"
+                  id="edit-camera-input"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleEditImageChange}
+                  className="hidden"
                 />
+                <Input
+                  id="edit-file-input"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleEditImageChange}
+                  className="hidden"
+                />
+                {editImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {editImages.map((img, idx) => (
+                      <div key={idx} className="relative w-12 h-12 group">
+                        <img src={img.startsWith('img_') ? '' : img} alt="Preview" className="w-full h-full object-cover rounded-md shadow bg-muted" title={img.startsWith('img_') ? "Imagem Salva (Não altera a foto)" : "Nova foto"} />
+                        <button
+                          type="button"
+                          onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 w-5 h-5 flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

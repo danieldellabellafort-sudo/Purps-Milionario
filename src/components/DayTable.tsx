@@ -32,6 +32,8 @@ export interface DayEntry {
   image?: string; // Base64 da imagem
   images?: string[]; // Suporte a múltiplas imagens
   timestamp?: number;
+  originalUsdGains?: number;
+  originalUsdLosses?: number;
 }
 
 interface DayTableProps {
@@ -97,11 +99,25 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-profit-foreground">
-                  +{fmt(entry.gains)}
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  {entry.originalUsdGains || entry.gains > 0 ? (
+                    <div className="flex items-center justify-end gap-2">
+                      {entry.originalUsdGains && <span className="font-mono font-bold text-muted-foreground/90 bg-muted/40 px-2 py-0.5 rounded-md text-[13px]">{entry.originalUsdGains.toFixed(2).replace(".", ",")} USD / {entry.gains.toFixed(2).replace(".", ",")} BRL</span>}
+                      {entry.gains > 0 && <span className="text-profit font-mono font-bold bg-profit/10 px-2 py-0.5 rounded-md">+{fmt(entry.gains)}</span>}
+                    </div>
+                  ) : (
+                    <span className="font-mono text-muted-foreground/30">—</span>
+                  )}
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-loss-foreground">
-                  -{fmt(entry.losses)}
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  {entry.originalUsdLosses || entry.losses > 0 ? (
+                    <div className="flex items-center justify-end gap-2">
+                      {entry.originalUsdLosses && <span className="font-mono font-bold text-muted-foreground/90 bg-muted/40 px-2 py-0.5 rounded-md text-[13px]">{entry.originalUsdLosses.toFixed(2).replace(".", ",")} USD / {entry.losses.toFixed(2).replace(".", ",")} BRL</span>}
+                      {entry.losses > 0 && <span className="text-loss font-mono font-bold bg-loss/10 px-2 py-0.5 rounded-md">-{fmt(entry.losses)}</span>}
+                    </div>
+                  ) : (
+                    <span className="font-mono text-muted-foreground/30">—</span>
+                  )}
                 </td>
                 <td
                   className={cn(

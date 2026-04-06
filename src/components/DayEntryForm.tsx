@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface DayEntryFormProps {
-  onAdd: (day: number, gains: number, losses: number, description: string, images?: string[]) => void;
+  onAdd: (day: number, gains: number, losses: number, description: string, images?: string[], originalUsdGains?: number, originalUsdLosses?: number) => void;
   currentMonth: Date;
 }
 
@@ -75,13 +75,18 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
     let g = parseFloat(gains.replace(",", ".")) || 0;
     let l = parseFloat(losses.replace(",", ".")) || 0;
     
+    let originalUsdGains: number | undefined;
+    let originalUsdLosses: number | undefined;
+
     if (currency === 'USD') {
+      originalUsdGains = g > 0 ? g : undefined;
+      originalUsdLosses = l > 0 ? l : undefined;
       g = g * usdRate;
       l = l * usdRate;
     }
     
     if (g === 0 && l === 0) return;
-    onAdd(selectedDate.getDate(), g, l, description.trim(), images.length > 0 ? images : undefined);
+    onAdd(selectedDate.getDate(), g, l, description.trim(), images.length > 0 ? images : undefined, originalUsdGains, originalUsdLosses);
     
     const today = new Date();
     setSelectedDate((today >= monthStart && today <= monthEnd) ? today : undefined);
