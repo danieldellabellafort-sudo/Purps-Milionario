@@ -367,7 +367,8 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
                         if (i === 0) return null;
                         const startX = (i - 1) / (chartData.length - 1);
                         const endX = i / (chartData.length - 1);
-                        const color = d.acc >= 0 ? "#22c55e" : "#ef4444";
+                        const prev = chartData[i - 1];
+                        const color = d.acc >= prev.acc ? "#22c55e" : "#ef4444";
                         return (
                           <React.Fragment key={`grad-${i}`}>
                             <stop offset={`${(startX * 100).toFixed(4)}%`} stopColor={color} stopOpacity={1} />
@@ -408,15 +409,31 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
                     stroke="url(#splitColorPnl)" 
                     strokeWidth={4} 
                     dot={(props: any) => {
-                      const { cx, cy, payload } = props;
+                      const { cx, cy, payload, index } = props;
                       if (cx == null || cy == null) return null;
-                      const isPos = payload.acc >= 0;
+                      
+                      let isPos = true;
+                      if (index === 0) {
+                        isPos = payload.acc >= 0;
+                      } else {
+                        const prev = chartData[index - 1];
+                        isPos = payload.acc >= prev.acc;
+                      }
+                      
                       return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={6} fill={isPos ? "#22c55e" : "#ef4444"} />;
                     }}
                     activeDot={(props: any) => {
-                      const { cx, cy, payload } = props;
+                      const { cx, cy, payload, index } = props;
                       if (cx == null || cy == null) return null;
-                      const isPos = payload.acc >= 0;
+                      
+                      let isPos = true;
+                      if (index === 0) {
+                        isPos = payload.acc >= 0;
+                      } else {
+                        const prev = chartData[index - 1];
+                        isPos = payload.acc >= prev.acc;
+                      }
+                      
                       return <circle key={`activedot-${cx}-${cy}`} cx={cx} cy={cy} r={8} fill={isPos ? "#22c55e" : "#ef4444"} />;
                     }}
                   />
