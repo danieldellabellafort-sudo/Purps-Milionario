@@ -13,7 +13,7 @@ interface PnlDownloadModalProps {
 
 const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
   const { user } = useAuth();
-  const [selectedFriend, setSelectedFriend] = useState<Friend>(user || "Daniel");
+  const [selectedFriend, setSelectedFriend] = useState<Friend>(user === "MASTER" ? "Daniel" : (user || "Daniel"));
   const [daysRange, setDaysRange] = useState<number>(30);
   const [bgColor, setBgColor] = useState<string>("#121212");
   const [textColor, setTextColor] = useState<string>("#ffffff");
@@ -361,6 +361,24 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%" className="z-10 relative">
                 <LineChart data={chartData} margin={{ top: 80, right: 10, left: 10, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="splitColorPnl" x1="0" y1="0" x2="1" y2="0">
+                      {chartData.length > 1 ? chartData.map((d, i) => {
+                        if (i === 0) return null;
+                        const startX = (i - 1) / (chartData.length - 1);
+                        const endX = i / (chartData.length - 1);
+                        const color = d.acc >= 0 ? "#22c55e" : "#ef4444";
+                        return (
+                          <React.Fragment key={`grad-${i}`}>
+                            <stop offset={`${(startX * 100).toFixed(4)}%`} stopColor={color} stopOpacity={1} />
+                            <stop offset={`${(endX * 100).toFixed(4)}%`} stopColor={color} stopOpacity={1} />
+                          </React.Fragment>
+                        );
+                      }) : (
+                        <stop offset="100%" stopColor={chartData[0]?.acc >= 0 ? "#22c55e" : "#ef4444"} />
+                      )}
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={textColor} strokeOpacity={0.15} vertical={true} />
                   <XAxis dataKey="display" stroke={textColor} strokeOpacity={0.4} tick={{ fill: textColor, opacity: 0.6, fontSize: 13, fontWeight: 600 }} dy={10} axisLine={false} tickLine={false} />
                   <YAxis 
@@ -384,12 +402,23 @@ const PnlDownloadModal = ({ data, onClose }: PnlDownloadModalProps) => {
                   />
                   
                   <Line 
+                    isAnimationActive={false}
                     type="linear" 
                     dataKey="acc" 
-                    stroke={isPositive ? "#22c55e" : "#ef4444"} 
+                    stroke="url(#splitColorPnl)" 
                     strokeWidth={4} 
-                    dot={{ fill: isPositive ? "#22c55e" : "#ef4444", r: 6, strokeWidth: 0 }}
-                    activeDot={{ r: 8, fill: isPositive ? "#22c55e" : "#ef4444", strokeWidth: 0 }}
+                    dot={(props: any) => {
+                      const { cx, cy, payload } = props;
+                      if (cx == null || cy == null) return null;
+                      const isPos = payload.acc >= 0;
+                      return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={6} fill={isPos ? "#22c55e" : "#ef4444"} />;
+                    }}
+                    activeDot={(props: any) => {
+                      const { cx, cy, payload } = props;
+                      if (cx == null || cy == null) return null;
+                      const isPos = payload.acc >= 0;
+                      return <circle key={`activedot-${cx}-${cy}`} cx={cx} cy={cy} r={8} fill={isPos ? "#22c55e" : "#ef4444"} />;
+                    }}
                   />
                 </LineChart>
               </ResponsiveContainer>
