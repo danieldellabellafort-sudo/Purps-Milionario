@@ -34,18 +34,20 @@ export interface DayEntry {
   timestamp?: number;
   originalUsdGains?: number;
   originalUsdLosses?: number;
+  mentions?: string[];
 }
 
 interface DayTableProps {
   entries: DayEntry[];
   onRemove?: (entry: DayEntry) => void;
   onEdit?: (entry: DayEntry) => void;
+  profilePics?: Record<string, string>;
 }
 
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
+const DayTable = ({ entries, onRemove, onEdit, profilePics = {} }: DayTableProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (entries.length === 0) {
@@ -87,7 +89,20 @@ const DayTable = ({ entries, onRemove, onEdit }: DayTableProps) => {
                 </td>
                 <td className="px-4 py-3 text-muted-foreground max-w-[200px]">
                   <div className="flex items-center gap-3">
-                    <span className="truncate">{entry.description || "—"}</span>
+                    {entry.mentions && entry.mentions.length > 0 && (
+                      <div className="flex items-center">
+                        {entry.mentions.map((m, idx) => (
+                          <img 
+                            key={m} 
+                            src={profilePics?.[m] || "/favicon.png"} 
+                            title={m} 
+                            alt={m} 
+                            className={cn("w-6 h-6 rounded-full object-cover border-2 border-background shadow-sm", idx > 0 ? "-ml-2" : "")} 
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <span className="truncate">{entry.description || (entry.mentions && entry.mentions.length > 0 ? "" : "—")}</span>
                     {!!(entry.images?.length || entry.image) && (
                       <div className="flex items-center gap-1">
                         {(entry.images || (entry.image ? [entry.image] : [])).map((img, idx) => (

@@ -69,6 +69,7 @@ const Index = () => {
   const [editGains, setEditGains] = useState("");
   const [editLosses, setEditLosses] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editMentions, setEditMentions] = useState<string[]>([]);
   const [editCurrency, setEditCurrency] = useState<'BRL' | 'USD'>('BRL');
   const [editImages, setEditImages] = useState<string[]>([]);
   const [usdRate, setUsdRate] = useState<number>(5.0);
@@ -260,11 +261,11 @@ const Index = () => {
   const entries = friendData[key] || [];
 
   const handleAdd = useCallback(
-    (day: number, gains: number, losses: number, description: string, images?: string[], originalUsdGains?: number, originalUsdLosses?: number) => {
+    (day: number, gains: number, losses: number, description: string, images?: string[], originalUsdGains?: number, originalUsdLosses?: number, mentions?: string[]) => {
       // Only the owner can add
       if (selectedFriend !== user && user !== "MASTER") return;
       
-      const newEntry: DayEntry = { day, gains, losses, description, images, timestamp: Date.now(), originalUsdGains, originalUsdLosses };
+      const newEntry: DayEntry = { day, gains, losses, description, images, timestamp: Date.now(), originalUsdGains, originalUsdLosses, mentions };
       const updated = [...entries, newEntry];
       toast.success(`Registro adicionado para o dia ${day}!`);
       
@@ -314,11 +315,11 @@ const Index = () => {
     const updated = entries.map(e => {
       if (editingEntry.timestamp) {
         return e.timestamp === editingEntry.timestamp 
-          ? { ...e, gains: g, losses: l, description: editDescription.trim(), timestamp: Date.now(), originalUsdGains, originalUsdLosses, images: editImages.length > 0 ? editImages : undefined } 
+          ? { ...e, gains: g, losses: l, description: editDescription.trim(), timestamp: Date.now(), originalUsdGains, originalUsdLosses, images: editImages.length > 0 ? editImages : undefined, mentions: editMentions.length > 0 ? editMentions : undefined } 
           : e;
       }
       return e.day === editingEntry.day 
-        ? { ...e, gains: g, losses: l, description: editDescription.trim(), timestamp: Date.now(), originalUsdGains, originalUsdLosses, images: editImages.length > 0 ? editImages : undefined } 
+        ? { ...e, gains: g, losses: l, description: editDescription.trim(), timestamp: Date.now(), originalUsdGains, originalUsdLosses, images: editImages.length > 0 ? editImages : undefined, mentions: editMentions.length > 0 ? editMentions : undefined } 
         : e;
     });
 
@@ -345,6 +346,7 @@ const Index = () => {
     }
     
     setEditDescription(entry.description || "");
+    setEditMentions(entry.mentions || []);
     setEditImages(entry.images || (entry.image ? [entry.image] : []));
   };
 
@@ -640,7 +642,7 @@ const Index = () => {
               <h2 className="font-semibold text-base mb-4">
                 Novo Registro — {selectedFriend}
               </h2>
-              <DayEntryForm onAdd={handleAdd} currentMonth={currentMonth} />
+              <DayEntryForm onAdd={handleAdd} currentMonth={currentMonth} profilePics={profilePics} ownerName={selectedFriend} />
             </div>
           ) : (
              <div className="glass-card rounded-2xl p-6 flex flex-col items-center justify-center text-center">
@@ -669,6 +671,16 @@ const Index = () => {
                     <div>
                       <p className="text-sm">
                         <span className="font-bold">{act.friend}</span> alterou o log do <strong className="text-primary font-mono bg-primary/10 px-1 rounded">Dia {act.day}</strong>
+                        {act.mentions && act.mentions.length > 0 && (
+                          <span className="inline-flex items-center gap-1 ml-2 text-muted-foreground/80 text-xs">
+                            com
+                            <div className="flex items-center gap-[-4px]">
+                              {act.mentions.map((m, idx) => (
+                                <img key={m} src={profilePics[m] || "/favicon.png"} title={m} alt={m} className={cn("w-5 h-5 rounded-full object-cover border border-background shadow-sm", idx > 0 ? "-ml-1" : "")} />
+                              ))}
+                            </div>
+                          </span>
+                        )}
                       </p>
                       <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         🕐 {formatTimeAgo(act.timestamp || now)}
@@ -694,7 +706,11 @@ const Index = () => {
                         <span className="text-loss font-mono font-bold bg-loss/10 px-2 py-0.5 rounded-md">-{fmt(act.losses)}</span>
                       )
                     )}
-                    {act.description && <span className="text-muted-foreground truncate max-w-[150px] italic cursor-help" title={act.description}>"{act.description}"</span>}
+                    {act.description && (
+                      <span className="text-muted-foreground truncate max-w-[150px] italic cursor-help" title={act.description}>
+                        "{act.description}"
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -715,7 +731,7 @@ const Index = () => {
           <h2 className="font-semibold text-base">
             Registros de {selectedFriend}
           </h2>
-          <DayTable entries={entries} onRemove={isOwner ? handleRemove : undefined} onEdit={isOwner ? initEdit : undefined} />
+          <DayTable entries={entries} onRemove={isOwner ? handleRemove : undefined} onEdit={isOwner ? initEdit : undefined} profilePics={profilePics} />
         </div>
       </main>
       </div>
@@ -740,14 +756,40 @@ const Index = () => {
             </p>
 
             <div className="space-y-4 mb-6">
-              <div className="space-y-2">
-                <Label className="text-foreground font-semibold">Descrição (opcional)</Label>
-                <Input
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="bg-background/50 h-10 text-base focus-visible:ring-primary/30 border-primary/20"
-                  placeholder="Motivo..."
-                />
+              <div className="space-y-3 p-3 bg-card/40 border rounded-xl">
+                <div className="space-y-2">
+                  <Label className="text-foreground font-semibold">Descrição (opcional)</Label>
+                  <Input
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="bg-background/50 h-10 text-base focus-visible:ring-primary/30 border-primary/20"
+                    placeholder="Motivo..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground font-semibold">Marcar Alguém</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_FRIENDS.filter(f => f !== selectedFriend).map((friend) => {
+                      const isSelected = editMentions.includes(friend);
+                      return (
+                        <button
+                          type="button"
+                          key={friend}
+                          onClick={() => setEditMentions(m => isSelected ? m.filter(x => x !== friend) : [...m, friend])}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs sm:text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/50",
+                            isSelected 
+                              ? "bg-primary/10 border-primary text-primary shadow-sm" 
+                              : "bg-background text-muted-foreground hover:bg-accent"
+                          )}
+                        >
+                          <img src={profilePics?.[friend] || "/favicon.png"} className="w-5 h-5 rounded-full object-cover shadow-sm bg-background border" alt={friend} />
+                          {friend}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 justify-between bg-background/50 p-1.5 rounded-lg border border-primary/20">

@@ -5,6 +5,7 @@ import { CalendarIcon, Plus, Camera, ImageIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ALL_FRIENDS } from "@/components/AuthProvider";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -14,11 +15,13 @@ import {
 import { cn } from "@/lib/utils";
 
 interface DayEntryFormProps {
-  onAdd: (day: number, gains: number, losses: number, description: string, images?: string[], originalUsdGains?: number, originalUsdLosses?: number) => void;
+  onAdd: (day: number, gains: number, losses: number, description: string, images?: string[], originalUsdGains?: number, originalUsdLosses?: number, mentions?: string[]) => void;
   currentMonth: Date;
+  profilePics?: Record<string, string>;
+  ownerName?: string;
 }
 
-const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
+const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayEntryFormProps) => {
   const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
   const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
@@ -29,6 +32,7 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
   const [gains, setGains] = useState("");
   const [losses, setLosses] = useState("");
   const [description, setDescription] = useState("");
+  const [mentions, setMentions] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -86,13 +90,14 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
     }
     
     if (g === 0 && l === 0) return;
-    onAdd(selectedDate.getDate(), g, l, description.trim(), images.length > 0 ? images : undefined, originalUsdGains, originalUsdLosses);
+    onAdd(selectedDate.getDate(), g, l, description.trim(), images.length > 0 ? images : undefined, originalUsdGains, originalUsdLosses, mentions.length > 0 ? mentions : undefined);
     
     const today = new Date();
     setSelectedDate((today >= monthStart && today <= monthEnd) ? today : undefined);
     setGains("");
     setLosses("");
     setDescription("");
+    setMentions([]);
     setImages([]);
   };
 
@@ -143,15 +148,41 @@ const DayEntryForm = ({ onAdd, currentMonth }: DayEntryFormProps) => {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs text-muted-foreground">Descrição / Motivo</Label>
-        <Input
-          type="text"
-          placeholder="Ex: Aposta futebol, jogo de cartas..."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="text-base h-12"
-        />
+      <div className="space-y-3 w-full border rounded-xl p-3 bg-card/40">
+        <div className="space-y-1.5 w-full">
+          <Label className="text-xs text-muted-foreground">Descrição / Motivo</Label>
+          <Input
+            type="text"
+            placeholder="Ex: Aposta futebol, campeonato..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="text-base h-12"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground font-semibold flex items-center gap-1"><Plus className="w-3 h-3" /> Marcar Alguém (Opcional)</Label>
+          <div className="flex flex-wrap gap-2">
+            {ALL_FRIENDS.filter(f => f !== (ownerName || '')).map((friend) => {
+              const isSelected = mentions.includes(friend);
+              return (
+                <button
+                  type="button"
+                  key={friend}
+                  onClick={() => setMentions(m => isSelected ? m.filter(x => x !== friend) : [...m, friend])}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs sm:text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/50",
+                    isSelected 
+                      ? "bg-primary/10 border-primary text-primary shadow-sm" 
+                      : "bg-background border-border hover:bg-accent hover:border-accent-foreground/20 text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <img src={profilePics?.[friend] || "/favicon.png"} className="w-5 h-5 rounded-full object-cover shadow-sm bg-background border" alt={friend} />
+                  {friend}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
       <div className="flex items-center gap-2 mb-1 justify-between bg-muted/30 p-1.5 rounded-lg border">
         <Label className="text-xs text-muted-foreground font-semibold ml-1">Moeda de Lançamento:</Label>
