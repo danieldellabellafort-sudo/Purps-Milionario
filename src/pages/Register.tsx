@@ -19,14 +19,14 @@ const Register = () => {
     return null;
   }
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !password) {
       toast.error("Por favor, preencha todos os campos.");
       return;
     }
 
-    const result = register(name, email, password);
+    const result = await register(name, email, password);
     if (result === true) {
       toast.success("Conta criada com sucesso! Redirecionando...");
       navigate("/");

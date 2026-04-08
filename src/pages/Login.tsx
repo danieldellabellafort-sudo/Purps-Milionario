@@ -19,14 +19,14 @@ const Login = () => {
     return null;
   }
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error("Por favor, preencha todos os campos.");
       return;
     }
 
-    const result = login(email, password);
+    const result = await login(email, password);
     if (result === true) {
       toast.success("Login efetuado com sucesso!");
       navigate("/");
