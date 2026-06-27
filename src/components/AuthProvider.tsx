@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDoc, getDocs, setDoc, onSnapshot } from 'firebase/firestore';
 
-export const ALL_FRIENDS = ["Daniel", "Perez", "Ricardo", "Morote", "Pedro", "Enzo"] as const;
-export type Friend = (typeof ALL_FRIENDS)[number];
+export let ALL_FRIENDS: string[] = [];
+export type Friend = string;
 
 interface AuthContextType {
   user: Friend | "MASTER" | null;
@@ -19,7 +19,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Friend | "MASTER" | null>(() => {
-    // Tenta recuperar do localStorage ao carregar (sessão atual do dispositivo)
     const saved = localStorage.getItem('auth_user_v4');
     return saved ? (saved as Friend | "MASTER") : null;
   });
@@ -27,7 +26,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<Record<string, { pass: string; friend: Friend }>>({});
 
   useEffect(() => {
-    // Listen to "diary_users" collection from Firestore to keep our list of friends in sync
     const unsubscribe = onSnapshot(collection(db, "diary_users"), (snapshot) => {
       const usersData: Record<string, { pass: string; friend: Friend }> = {};
       snapshot.forEach(docSnap => {
@@ -35,13 +33,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       setUsers(usersData);
     });
-
     return () => unsubscribe();
   }, []);
 
-  const friendsElement = Object.values(users).map(u => u.friend);
-  const friends = Array.from(new Set(friendsElement)).sort();
-  const availableFriends = ALL_FRIENDS.filter(f => !friends.includes(f));
+  const friends = Array.from(new Set(Object.values(users).map(u => u.friend))).sort();
+  ALL_FRIENDS = friends;
+  const availableFriends: Friend[] = [];
 
   const login = async (email: string, pass: string): Promise<string | true> => {
     const lowerEmail = email.toLowerCase();
@@ -79,7 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return "Este e-mail já está em uso.";
     }
     
-    // Check if name is taken directly from Firestore for accuracy
     const usersSnapshot = await getDocs(collection(db, "diary_users"));
     let isNameTaken = false;
     usersSnapshot.forEach(docSnap => {
@@ -90,26 +86,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return "Esse nome já está sendo utilizado por outra pessoa.";
     }
 
-    // Save to Firestore
-    await setDoc(userDocRef, { pass, friend: name as Friend });
+    await setDoc(userDocRef, { pass, friend: name });
     
-    setUser(name as Friend);
+    setUser(name);
     localStorage.setItem('auth_user_v4', name);
     return true;
   };
 
   const logout = () => {
     setUser(null);
-    // Limpa apenas a sessão local, MANTÉM os cadastros no banco
     localStorage.removeItem('auth_user_v4');
     sessionStorage.clear();
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i];
-        const eqPos = cookie.indexOf("=");
-        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-    }
     window.location.href = "/";
   };
 

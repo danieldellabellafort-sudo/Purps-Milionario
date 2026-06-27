@@ -211,7 +211,7 @@ const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayE
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Ganho ({currency === 'USD' ? 'US$' : 'R$'})</Label>
+          <Label className="text-xs text-muted-foreground">Depósito ({currency === 'USD' ? 'US$' : 'R$'})</Label>
           <Input
             type="number"
             step="0.01"
@@ -226,7 +226,7 @@ const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayE
           )}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Perda ({currency === 'USD' ? 'US$' : 'R$'})</Label>
+          <Label className="text-xs text-muted-foreground">Saque ({currency === 'USD' ? 'US$' : 'R$'})</Label>
           <Input
             type="number"
             step="0.01"

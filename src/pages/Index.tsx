@@ -56,6 +56,7 @@ const formatTimeAgo = (timestamp: number) => {
 
 const Index = () => {
   const { user, logout, friends } = useAuth();
+  const ALL_FRIENDS = friends;
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 3, 1));
   const [selectedFriend, setSelectedFriend] = useState<Friend>(user === "MASTER" ? "Daniel" : (user || "Daniel"));
   const [chartFriend, setChartFriend] = useState<Friend>(user === "MASTER" ? "Daniel" : (user || "Daniel"));
@@ -163,29 +164,18 @@ const Index = () => {
     const file = e.target.files?.[0];
     if (file) {
       const isGif = file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif");
-      if (isGif) {
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error("Para evitar lentidão na sua rede, GIFs devem ter no máximo 10MB!");
-          e.target.value = '';
-          return;
-        }
-        
-        // Modal de edição vai aparecer SOMENTE se for um GIF
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setCropImageSrc(reader.result as string);
-          e.target.value = ''; 
-        };
-        reader.readAsDataURL(file);
-      } else {
-        // Se NÃO for GIF, aplica direto
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          handleApplyCrop(reader.result as string, false);
-          e.target.value = '';
-        };
-        reader.readAsDataURL(file);
+      if (isGif && file.size > 10 * 1024 * 1024) {
+        toast.error("Para evitar lentidão na sua rede, GIFs devem ter no máximo 10MB!");
+        e.target.value = '';
+        return;
       }
+      // Sempre abre o editor de imagem para qualquer tipo de arquivo
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCropImageSrc(reader.result as string);
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
     } else {
        e.target.value = ''; // Reset if no file
     }
@@ -850,7 +840,7 @@ const Index = () => {
 
               <div className="flex gap-4">
                 <div className="space-y-2 flex-1">
-                  <Label className="text-profit-foreground font-semibold">Ganho</Label>
+                  <Label className="text-profit-foreground font-semibold">Depósito</Label>
                   <Input
                     value={editGains}
                     onChange={(e) => setEditGains(e.target.value)}
@@ -859,7 +849,7 @@ const Index = () => {
                   />
                 </div>
                 <div className="space-y-2 flex-1">
-                  <Label className="text-loss-foreground font-semibold">Perda</Label>
+                  <Label className="text-loss-foreground font-semibold">Saque</Label>
                   <Input
                     value={editLosses}
                     onChange={(e) => setEditLosses(e.target.value)}
