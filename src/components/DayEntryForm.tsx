@@ -26,12 +26,12 @@ const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayE
   const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
-    const today = new Date();
-    return (today >= monthStart && today <= monthEnd) ? today : undefined;
+    return new Date();
   });
   const [gains, setGains] = useState("");
   const [losses, setLosses] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState("Surebet");
+  const [editingDesc, setEditingDesc] = useState(false);
   const [mentions, setMentions] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -96,7 +96,8 @@ const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayE
     setSelectedDate((today >= monthStart && today <= monthEnd) ? today : undefined);
     setGains("");
     setLosses("");
-    setDescription("");
+    setDescription("Surebet");
+    setEditingDesc(false);
     setMentions([]);
     setImages([]);
   };
@@ -140,8 +141,7 @@ const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayE
                 setSelectedDate(date);
                 setOpen(false);
               }}
-              disabled={(date) => date < monthStart || date > monthEnd}
-              defaultMonth={currentMonth}
+              defaultMonth={new Date()}
               locale={ptBR}
               className="p-3 pointer-events-auto"
             />
@@ -151,13 +151,27 @@ const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayE
       <div className="space-y-3 w-full border rounded-xl p-3 bg-card/40">
         <div className="space-y-1.5 w-full">
           <Label className="text-xs text-muted-foreground">Descrição / Motivo</Label>
-          <Input
-            type="text"
-            placeholder="Ex: Aposta futebol, campeonato..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="text-base h-12"
-          />
+          {editingDesc ? (
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Ex: Aposta futebol, campeonato..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => setEditingDesc(false)}
+                autoFocus
+                className="text-base h-12"
+              />
+            </div>
+          ) : (
+            <div
+              className="flex items-center justify-between h-12 px-3 rounded-md border bg-background cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setEditingDesc(true)}
+            >
+              <span className="text-base text-foreground">{description || "Surebet"}</span>
+              <span className="text-muted-foreground text-xs flex items-center gap-1">✏️ editar</span>
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground font-semibold flex items-center gap-1"><Plus className="w-3 h-3" /> Marcar Alguém (Opcional)</Label>
