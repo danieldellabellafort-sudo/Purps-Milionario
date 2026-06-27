@@ -76,8 +76,12 @@ const DayEntryForm = ({ onAdd, currentMonth, profilePics = {}, ownerName }: DayE
     e.preventDefault();
     if (!selectedDate) return;
     
-    let g = parseFloat(gains.replace(",", ".")) || 0;
-    let l = parseFloat(losses.replace(",", ".")) || 0;
+    // Depósito = o que foi apostado (losses/custo), Saque = o que voltou (gains/retorno)
+    const deposito = parseFloat(gains.replace(",", ".")) || 0;
+    const saque = parseFloat(losses.replace(",", ".")) || 0;
+    
+    let g = saque;   // saque é o retorno (gains)
+    let l = deposito; // depósito é o custo (losses)
     
     let originalUsdGains: number | undefined;
     let originalUsdLosses: number | undefined;
