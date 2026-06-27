@@ -283,6 +283,7 @@ const Index = () => {
   };
 
 
+  const key = monthKey(currentMonth);
   const friendData = data[selectedFriend] || {};
   const entries = friendData[key] || [];
 
