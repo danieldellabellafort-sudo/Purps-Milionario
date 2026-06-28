@@ -710,15 +710,6 @@ const Index = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm bg-background/50 p-2 px-4 rounded-lg flex-wrap justify-end">
-                    {act.gains > 0 && (
-                      act.originalUsdGains ? (
-                        <span className="text-profit font-mono font-bold bg-profit/10 px-2 py-0.5 rounded-md">
-                          + {act.originalUsdGains.toString().replace(".", ",")} USD / {act.gains.toFixed(2).replace(".", ",")} BRL
-                        </span>
-                      ) : (
-                        <span className="text-profit font-mono font-bold bg-profit/10 px-2 py-0.5 rounded-md">+{fmt(act.gains)}</span>
-                      )
-                    )}
                     {act.losses > 0 && (
                       act.originalUsdLosses ? (
                         <span className="text-loss font-mono font-bold bg-loss/10 px-2 py-0.5 rounded-md">
@@ -726,6 +717,15 @@ const Index = () => {
                         </span>
                       ) : (
                         <span className="text-loss font-mono font-bold bg-loss/10 px-2 py-0.5 rounded-md">-{fmt(act.losses)}</span>
+                      )
+                    )}
+                    {act.gains > 0 && (
+                      act.originalUsdGains ? (
+                        <span className="text-profit font-mono font-bold bg-profit/10 px-2 py-0.5 rounded-md">
+                          + {act.originalUsdGains.toString().replace(".", ",")} USD / {act.gains.toFixed(2).replace(".", ",")} BRL
+                        </span>
+                      ) : (
+                        <span className="text-profit font-mono font-bold bg-profit/10 px-2 py-0.5 rounded-md">+{fmt(act.gains)}</span>
                       )
                     )}
                     {act.description && (
